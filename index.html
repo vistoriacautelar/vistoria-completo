@@ -1063,21 +1063,25 @@ onAuthStateChanged(auth,async user=>{
     if(snapUser.exists()){
       currentUserData=snapUser.data();currentRole=currentUserData.role;assinaturaTecnico=currentUserData.assinatura||null;
     } else {
-      // Doc do usuário não existe. Dois cenários:
-      //  (a) FUNDADOR: é o primeiríssimo acesso do sistema (coleção users vazia) → vira master.
-      //  (b) CONTA ÓRFÃ: a conta existe no Auth mas perdeu o doc no Firestore (bug antigo de
-      //      cadastro, onde o Auth era criado mas o setDoc falhava). NÃO deve virar master —
-      //      recria o doc como "cadastrador" pra destravar o uso (gerar PDF etc.).
+      // Doc do usuário não existe. Decidir se é o FUNDADOR (primeiro do sistema → master)
+      // ou uma conta sem perfil (→ cadastrador).
+      // Em vez de listar a coleção users (que as regras bloqueiam pra não-master), usamos
+      // um doc de controle único em /config/bootstrap:
+      //   - se ele NÃO existe → este é o fundador: cria o doc de bootstrap + vira master
+      //   - se já existe → alguém já é master: este usuário entra como cadastrador
       let ehFundador=false;
       try{
-        const todosUsers=await getDocs(collection(db,"users"));
-        ehFundador=todosUsers.empty;
+        const snapBoot=await getDoc(doc(db,"config","bootstrap"));
+        ehFundador=!snapBoot.exists();
       }catch(_){ehFundador=false;}
       if(ehFundador){
         currentRole="master";
         currentUserData={nome:"Admin",email:user.email,role:"master"};
-        try{await setDoc(doc(db,"users",user.uid),{...currentUserData,criadoEm:serverTimestamp()});}
-        catch(e){console.error("Falha ao criar doc do fundador:",e);}
+        try{
+          // Marca o sistema como inicializado (trava o bootstrap pra sempre) e cria o master.
+          await setDoc(doc(db,"config","bootstrap"),{inicializadoEm:serverTimestamp(),masterUid:user.uid});
+          await setDoc(doc(db,"users",user.uid),{...currentUserData,criadoEm:serverTimestamp()});
+        }catch(e){console.error("Falha ao criar doc do fundador:",e);}
       }else{
         // Self-bootstrap como cadastrador (permitido pelas regras). Recupera a conta órfã.
         currentRole="cadastrador";
