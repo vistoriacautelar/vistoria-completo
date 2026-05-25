@@ -2063,15 +2063,14 @@ function salvarFotoFinalEditor(dataUrl,patologias,combinacoes){
   const temPat=combinacoes&&combinacoes.length;
   const tipo=temPat?"Detalhe":"Vista";
   let legendaCalc;
-  if(tipoLaudo==="completo"){
-    legendaCalc=tipo; // sempre Vista/Detalhe; código vai sobre a imagem
-  } else {
-    legendaCalc=temPat?unificarLegendasCombos(combinacoes):"Vista";
-  }
+  // Tanto completo quanto simplificado: a legenda mostra a patologia descrita por extenso
+  // embaixo da foto. No completo o formato é "Categoria A-L: subitens" (ex.: "Alvenaria:
+  // Trincas / Fissuras"); sem código sobre a imagem, só a seta.
+  legendaCalc=temPat?unificarLegendasCombos(combinacoes):"Vista";
   if(_efCameraMode==="adicionar"){
     _efFotos.push({dataUrl,ambiente:_efAmbienteAlvo,tipo,legenda:legendaCalc,combinacoes:combinacoes||[]});
   } else if(_efCameraMode==="substituir"&&_efSubstIdx!==null){
-    const legendaSubst=tipoLaudo==="completo"?legendaCalc:(temPat?legendaCalc:(_efFotos[_efSubstIdx]&&_efFotos[_efSubstIdx].legenda||"Vista"));
+    const legendaSubst=temPat?legendaCalc:(_efFotos[_efSubstIdx]&&_efFotos[_efSubstIdx].legenda||"Vista");
     _efFotos[_efSubstIdx]={..._efFotos[_efSubstIdx],dataUrl,legenda:legendaSubst,combinacoes:combinacoes||[]};
   }
   _efCameraMode=null;_efAmbienteAlvo=null;_efSubstIdx=null;
@@ -3551,7 +3550,8 @@ function gerarLegendaCombo(c){
   if(c.modo==="completo"){
     const cat=PATOLOGIAS_AL_MAP[c.categoria];
     const subStr=c.subs.map(n=>{const s=cat.subs.find(x=>x.n===n);return s?s.t:"?";}).join(" / ");
-    return c.codigo+" — "+subStr;
+    // Formato "Categoria: subitens" (ex.: "Alvenaria: Trincas / Fissuras"), sem código CNRP
+    return cat.nome+": "+subStr;
   }
   // Simplificado: patologias separadas por " / " (com espaço antes e depois)
   // Ex: "Parede: Fissura / Umidade / Trinca"
@@ -3565,10 +3565,27 @@ function gerarLegendaCombo(c){
 // Aplica-se apenas ao modo Simplificado — Completo mantém código CNRP por seta.
 function unificarLegendasCombos(combinacoes){
   if(!combinacoes||!combinacoes.length)return "";
-  // Modo completo: cada seta tem seu código próprio, não unifica
+  // Modo completo: agrupar por CATEGORIA A-L, deduplicar subitens, preservar ordem.
+  // Ex.: [{Alvenaria,[1]}, {Alvenaria,[3]}, {Piso,[5]}]
+  //   → "Alvenaria: Trincas / Fissuras / Umidade / Mofo / Piso / Pavimento: Recalque"
   const temCompleto=combinacoes.some(c=>c.modo==="completo");
   if(temCompleto){
-    return combinacoes.map(c=>gerarLegendaCombo(c)).join(" / ");
+    const ordemCat=[];
+    const grupos={};
+    combinacoes.forEach(c=>{
+      if(c.modo!=="completo")return;
+      const cat=PATOLOGIAS_AL_MAP[c.categoria];
+      if(!cat)return;
+      if(!grupos[c.categoria]){grupos[c.categoria]={nome:cat.nome,subs:[],set:new Set()};ordemCat.push(c.categoria);}
+      c.subs.forEach(n=>{
+        if(!grupos[c.categoria].set.has(n)){
+          grupos[c.categoria].set.add(n);
+          const s=cat.subs.find(x=>x.n===n);
+          if(s)grupos[c.categoria].subs.push(s.t);
+        }
+      });
+    });
+    return ordemCat.map(k=>grupos[k].nome+": "+grupos[k].subs.join(" / ")).join(" / ");
   }
   // Simplificado: agrupar por elemento, deduplicar patologias, preservar ordem
   const ordemElem=[];
@@ -3738,11 +3755,9 @@ function renderizarFotoComAcumuladas(tipoLaudo){
     // Se a seta foi rotacionada na edição, p.angle estará definido
     const ang=(typeof s.pontoFracao.angle==="number")?s.pontoFracao.angle:undefined;
     desenharSetaEmCanvas(ctx,tipX,tipY,origW,ang);
-    if(tipoLaudo==="completo"){
-      const c=s.combinacao;
-      const codigo=c&&c.modo==="completo"?c.codigo:(c&&c.codigo);
-      if(codigo)desenharCodigoCNRP(ctx,tipX,tipY,codigo,origW,ang);
-    }
+    // NOTA: a caixinha de código CNRP (B1, H1) NÃO é mais desenhada sobre a foto.
+    // A patologia agora aparece descrita por extenso na legenda embaixo da foto
+    // (ex.: "Alvenaria: Trincas / Fissuras"). Sobre a imagem fica apenas a seta.
   });
   return outCanvas.toDataURL("image/jpeg",0.92);
 }
@@ -4803,7 +4818,7 @@ window.finalizarVistoria=async()=>{
     const ML=12.7,MT=12.7,MR=12.7,MB=12.7; // 0.5 inch todos os lados
     const CW=PW-ML-MR; // 184.6mm largura util
 
-    const HDR=47;
+    const HDR=10;    // altura do cabeçalho enxuto (barra Local/Data) do Anexo II
     const LEGH=8;    // altura legenda
     const FPL=(CW-1)/2;
     const FPR=(CW-1)/2;
@@ -4833,7 +4848,7 @@ window.finalizarVistoria=async()=>{
       const pF=pagFotos[pg].fotos;
       const isP=pagFotos[pg].isPrimeira;
       const locais=[...new Set(pF.map(f=>f.ambiente))];
-      pdfHeader(pdf,ML,PW,CW,currentVistoria,locais.join(" / "),logoSrc,HDR,MT,logoPrep);
+      pdfHeaderFotos(pdf,ML,PW,CW,currentVistoria,locais.join(" / "),MT);
       let y=Y0;
 
       if(isP&&pF.length>0){
@@ -5456,6 +5471,20 @@ async function shareOrDownload(blob,nome,mime){
   a.click();
   document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
+
+// Cabeçalho ENXUTO para as páginas do Anexo II (relatório fotográfico): apenas a barra
+// "Local / Data Vistoria", sem o bloco de Informações do Responsável (nome, endereço, coletor).
+// Retorna a altura ocupada (mm) para que o layout das fotos parta logo abaixo.
+function pdfHeaderFotos(pdf,ML,PW,CW,v,local,MT){
+  const h=8; // altura da barra
+  pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.4);
+  pdf.rect(ML,MT,CW,h,"S");
+  pdf.setFont("helvetica","bold");pdf.setFontSize(8.5);
+  pdf.text("Local:  "+(local||""),ML+1.5,MT+h*0.66);
+  pdf.text("Data Vistoria:  "+(v.data||""),ML+CW-1.5,MT+h*0.66,{align:"right"});
+  pdf.setLineWidth(0.2);pdf.line(ML+CW/2,MT,ML+CW/2,MT+h);
+  return h;
 }
 
 function pdfHeader(pdf,ML,PW,CW,v,local,logoSrc,HDR,MT,logoPrep,showLocalBar){
