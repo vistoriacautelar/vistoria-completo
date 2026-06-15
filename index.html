@@ -2866,20 +2866,30 @@ window.criarVistoria=async()=>{
   if(!rua||!num)return alert("Preencha rua e numero do imóvel");
   // Usa cache local em vez de buscar do Firestore (era a causa do "Iniciar Vistoria demora").
   // Fallback para Firestore só se realmente não tiver no cache (caso raro).
+  // Importante: _cacheClientes é array [{id,...}], _cacheColetores é objeto indexado por
+  // CLIENTE_ID que aponta para um array de coletores. Por isso colD não é _cacheColetores[colId]
+  // (que é o id do COLETOR), mas sim o item dentro do array do cliente correspondente.
   let clD=_cacheClientes&&_cacheClientes.find(c=>c.id===cId);
-  let colD=_cacheColetores&&_cacheColetores[colId];
+  const colsDoCliente=_cacheColetores&&_cacheColetores[cId];
+  let colD=colsDoCliente&&colsDoCliente.find(c=>c.id===colId);
   if(!clD||!colD){
     // Busca apenas o que faltou (com pequeno timeout pra não travar UI)
     const promises=[];
-    if(!clD)promises.push(getDoc(doc(db,"clientes",cId)).then(s=>clD=s.data()));
-    if(!colD)promises.push(getDoc(doc(db,"coletores",colId)).then(s=>colD=s.data()));
+    if(!clD)promises.push(getDoc(doc(db,"clientes",cId)).then(s=>{clD=s.data();}));
+    if(!colD)promises.push(getDoc(doc(db,"coletores",colId)).then(s=>{colD=s.data();}));
     try{
       await Promise.race([
         Promise.all(promises),
         new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout")),5000))
       ]);
     }catch(e){
+      console.error("Falha ao buscar cliente/coletor:",e,"cId=",cId,"colId=",colId,"clD=",clD,"colD=",colD);
       return alert("Não foi possível carregar dados de cliente/coletor. Verifique sua conexão.");
+    }
+    // Defesa: se Firestore retornou undefined (doc inexistente), avisa explicitamente
+    if(!clD||!colD){
+      console.error("Cliente/coletor não encontrados no Firestore. clD=",clD,"colD=",colD);
+      return alert("Cliente ou coletor selecionado não foi encontrado. Recarregue a página e tente novamente.");
     }
   }
   const now=new Date();
