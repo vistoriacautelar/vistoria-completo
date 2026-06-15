@@ -355,6 +355,71 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
   </div>
 </div>
 
+<!-- ===== TELA: IDENTIFICACAO DO IMOVEL (apos Nova Vistoria, antes de tirar fotos) ===== -->
+<div id="s-identificacao" class="screen">
+  <div class="topbar"><button class="back" onclick="goTo('s-nova-vistoria')">&#8249; Voltar</button><h1>Identificacao do Imovel</h1></div>
+  <div class="content">
+    <div class="card"><h2>Informacoes Gerais</h2>
+      <p style="font-size:12px;color:#888;margin-bottom:10px">Servicos publicos disponiveis no local. Desmarque apenas o que NAO houver.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-energia" checked style="width:18px;height:18px">Energia Eletrica</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-iluminacao" checked style="width:18px;height:18px">Iluminacao Publica</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-pavimentacao" checked style="width:18px;height:18px">Pavimentacao</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-guias" checked style="width:18px;height:18px">Guias e Sarjetas</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-agua" checked style="width:18px;height:18px">Rede de Agua</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-esgoto" checked style="width:18px;height:18px">Rede de Esgoto</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-gas" checked style="width:18px;height:18px">Gas Encanado</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-telefone" checked style="width:18px;height:18px">Rede Telefonica</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-drenagem" checked style="width:18px;height:18px">Drenagem Pluvial</label>
+      </div>
+    </div>
+    <div class="card"><h2>Zoneamento</h2>
+      <div class="field"><label>Tipo de zoneamento</label>
+        <select id="id-zoneamento">
+          <option value="Residencial">Residencial</option>
+          <option value="Comercial">Comercial</option>
+          <option value="Industrial">Industrial</option>
+          <option value="Misto" selected>Misto</option>
+        </select>
+      </div>
+    </div>
+    <div class="card"><h2>Construcao</h2>
+      <div class="field"><label>Garagem</label>
+        <select id="id-garagem">
+          <option value="">Selecione...</option>
+          <option value="Coberta">Coberta</option>
+          <option value="Descoberta">Descoberta</option>
+          <option value="Nao tem">Nao tem</option>
+        </select>
+      </div>
+      <div class="field"><label>Numero de pavimentos</label>
+        <input type="number" id="id-pavimentos" placeholder="Ex: 1, 2, 3..." min="1" max="50" inputmode="numeric">
+      </div>
+    </div>
+    <div class="card"><h2>Materiais</h2>
+      <div class="field"><label>Cobertura</label>
+        <select id="id-mat-cobertura">
+          <option value="">Selecione...</option>
+          <option value="Telhas de Barro">Telhas de Barro</option>
+          <option value="Telhas de Fibrocimento">Telhas de Fibrocimento</option>
+          <option value="Laje de Concreto">Laje de Concreto</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div class="field"><label>Paredes</label>
+        <select id="id-mat-paredes">
+          <option value="">Selecione...</option>
+          <option value="Blocos de Cimento">Blocos de Cimento</option>
+          <option value="Tijolos de Barro">Tijolos de Barro</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn primary" onclick="confirmarIdentificacao()">Avancar para Vistoria</button>
+    <p style="font-size:11px;color:#888;text-align:center;margin-top:10px">Todos os campos sao opcionais. Voce pode preencher depois na Finalizacao.</p>
+  </div>
+</div>
+
 <div id="s-vistoria" class="screen">
   <div class="topbar"><button class="back" onclick="confirmarSairVistoria()">&#8249; Sair</button><h1 id="v-titulo">Vistoria</h1></div>
   <div class="content">
@@ -1011,7 +1076,7 @@ window.goTo=(id)=>{
   }
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");window.scrollTo(0,0);
-  const m={"s-dash":loadDash,"s-prestadores":loadPrestadores,"s-clientes":loadClientes,"s-coletores":loadColetores,"s-usuarios":loadUsuarios,"s-nova-vistoria":loadNovVistoriaForm,"s-historico":loadHistorico,"s-finalizacao":renderFinalizacao,"s-perfil":renderPerfil,"s-vistoria":iniciarGPS,"s-pendentes":loadPendentes,"s-editor-fotos":renderEditorFotos,"s-armazenamento":loadArmazenamento,"s-ambientes-custom":loadAmbientesCustomList,"s-resumo":loadResumo};
+  const m={"s-dash":loadDash,"s-prestadores":loadPrestadores,"s-clientes":loadClientes,"s-coletores":loadColetores,"s-usuarios":loadUsuarios,"s-nova-vistoria":loadNovVistoriaForm,"s-historico":loadHistorico,"s-finalizacao":renderFinalizacao,"s-perfil":renderPerfil,"s-vistoria":iniciarGPS,"s-pendentes":loadPendentes,"s-editor-fotos":renderEditorFotos,"s-armazenamento":loadArmazenamento,"s-ambientes-custom":loadAmbientesCustomList,"s-resumo":loadResumo,"s-identificacao":renderIdentificacao};
   if(m[id])m[id]();
 };
 window.showModal=(id)=>{if(id==="modal-coletor")populateClienteSelect("mcol-cliente");document.getElementById(id).style.display="flex";};
@@ -2452,6 +2517,80 @@ window.criarVistoria=async()=>{
   if(selTipo)selTipo.value="Vista";
   // Limpar campo de observações no início (não persiste de uma vistoria pra outra)
   const obsEl=document.getElementById("v-obs");if(obsEl)obsEl.value=currentVistoria.observacoes||"";
+  // Inicializa identificacao vazia (sera preenchida na tela s-identificacao no modo normal)
+  currentVistoria.identificacao=currentVistoria.identificacao||null;
+  // MODO AUSENTE: pula tela de identificacao (vai direto pra fachada/foto). Identificacao
+  // pode ser preenchida depois caso a vistoria seja retomada normalmente.
+  if(window._iniciandoComoAusente){
+    goTo("s-vistoria");renderFotos();
+    return;
+  }
+  // Reset dos campos do form de identificacao para defaults (todos checados, Misto, etc)
+  resetFormIdentificacao();
+  goTo("s-identificacao");
+};
+
+// Pre-popula o formulario de identificacao se a vistoria atual ja tiver dados salvos
+// (ex: cadastrador voltou pra tela para conferir/editar antes de finalizar)
+function renderIdentificacao(){
+  if(!currentVistoria||!currentVistoria.identificacao){
+    resetFormIdentificacao();
+    return;
+  }
+  const id=currentVistoria.identificacao;
+  const sp=id.servicosPublicos||{};
+  const elcheck=(k,v)=>{const el=document.getElementById(k);if(el)el.checked=v!==false;};
+  elcheck("id-sv-energia",sp.energia);
+  elcheck("id-sv-iluminacao",sp.iluminacao);
+  elcheck("id-sv-pavimentacao",sp.pavimentacao);
+  elcheck("id-sv-guias",sp.guias);
+  elcheck("id-sv-agua",sp.agua);
+  elcheck("id-sv-esgoto",sp.esgoto);
+  elcheck("id-sv-gas",sp.gas);
+  elcheck("id-sv-telefone",sp.telefone);
+  elcheck("id-sv-drenagem",sp.drenagem);
+  const z=document.getElementById("id-zoneamento");if(z)z.value=id.zoneamento||"Misto";
+  const g=document.getElementById("id-garagem");if(g)g.value=id.garagem||"";
+  const p=document.getElementById("id-pavimentos");if(p)p.value=id.pavimentos||"";
+  const mc=document.getElementById("id-mat-cobertura");if(mc)mc.value=(id.materiais&&id.materiais.cobertura)||"";
+  const mp=document.getElementById("id-mat-paredes");if(mp)mp.value=(id.materiais&&id.materiais.paredes)||"";
+}
+
+// Reseta o formulario de identificacao para os defaults (todos servicos checados, Misto)
+function resetFormIdentificacao(){
+  ["id-sv-energia","id-sv-iluminacao","id-sv-pavimentacao","id-sv-guias","id-sv-agua","id-sv-esgoto","id-sv-gas","id-sv-telefone","id-sv-drenagem"].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.checked=true;
+  });
+  const z=document.getElementById("id-zoneamento");if(z)z.value="Misto";
+  ["id-garagem","id-pavimentos","id-mat-cobertura","id-mat-paredes"].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value="";
+  });
+}
+
+// Coleta os dados do formulario de identificacao, salva em currentVistoria.identificacao e
+// avanca para a tela de vistoria. Todos os campos sao opcionais — campos em branco viram null.
+window.confirmarIdentificacao=()=>{
+  if(!currentVistoria){alert("Sessao da vistoria foi perdida. Volte e reinicie.");return;}
+  currentVistoria.identificacao={
+    servicosPublicos:{
+      energia:document.getElementById("id-sv-energia").checked,
+      iluminacao:document.getElementById("id-sv-iluminacao").checked,
+      pavimentacao:document.getElementById("id-sv-pavimentacao").checked,
+      guias:document.getElementById("id-sv-guias").checked,
+      agua:document.getElementById("id-sv-agua").checked,
+      esgoto:document.getElementById("id-sv-esgoto").checked,
+      gas:document.getElementById("id-sv-gas").checked,
+      telefone:document.getElementById("id-sv-telefone").checked,
+      drenagem:document.getElementById("id-sv-drenagem").checked
+    },
+    zoneamento:document.getElementById("id-zoneamento").value||"Misto",
+    garagem:document.getElementById("id-garagem").value||"",
+    pavimentos:document.getElementById("id-pavimentos").value||"",
+    materiais:{
+      cobertura:document.getElementById("id-mat-cobertura").value||"",
+      paredes:document.getElementById("id-mat-paredes").value||""
+    }
+  };
   goTo("s-vistoria");renderFotos();
 };
 
@@ -5106,7 +5245,7 @@ window.finalizarVistoria=async()=>{
     }
     // Salvar Firebase (sem fotos — fotos vão para IndexedDB local-only) + download
     // OBS: assinaturaResp gravada no Firestore (necessária para regerar comprovante depois).
-    const vDoc={clienteId:currentVistoria.clienteId,coletorId:currentVistoria.coletorId,clienteNome:currentVistoria.clienteNome,clienteRRT:currentVistoria.clienteRRT,coletorNome:currentVistoria.coletorNome,responsavel:currentVistoria.responsavel,endereco:currentVistoria.endereco,ocupacao:currentVistoria.ocupacao,tipo:currentVistoria.tipo,tipoLaudo:currentVistoria.tipoLaudo||"simplificado",estado:currentVistoria.estado,idade:currentVistoria.idade,data:currentVistoria.data,dataCompleta:currentVistoria.dataCompleta,userId:currentUser.uid,checklist:currentVistoria.checklist,ambientesExtras:ambientesExtras||[],observacoes:currentVistoria.observacoes,totalFotos:Object.keys(fotosPendentes).length,status:currentVistoria.statusVistoria||"concluida",pendente_retorno:isPendente,visitas:currentVistoria.visitas||1,criadoEm:serverTimestamp(),assinaturaResp:assinaturaData||null};
+    const vDoc={clienteId:currentVistoria.clienteId,coletorId:currentVistoria.coletorId,clienteNome:currentVistoria.clienteNome,clienteRRT:currentVistoria.clienteRRT,coletorNome:currentVistoria.coletorNome,responsavel:currentVistoria.responsavel,endereco:currentVistoria.endereco,ocupacao:currentVistoria.ocupacao,tipo:currentVistoria.tipo,tipoLaudo:currentVistoria.tipoLaudo||"simplificado",estado:currentVistoria.estado,idade:currentVistoria.idade,data:currentVistoria.data,dataCompleta:currentVistoria.dataCompleta,userId:currentUser.uid,checklist:currentVistoria.checklist,ambientesExtras:ambientesExtras||[],observacoes:currentVistoria.observacoes,identificacao:currentVistoria.identificacao||null,totalFotos:Object.keys(fotosPendentes).length,status:currentVistoria.statusVistoria||"concluida",pendente_retorno:isPendente,visitas:currentVistoria.visitas||1,criadoEm:serverTimestamp(),assinaturaResp:assinaturaData||null};
     // (A gravação no Firestore foi movida para DEPOIS da geração do PDF — ver abaixo.)
     // ============================================================================
     // ORDEM CRÍTICA: gerar o PDF (e ZIP) ANTES de qualquer escrita no Firestore.
