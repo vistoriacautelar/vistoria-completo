@@ -363,7 +363,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
 
 <!-- ===== TELA: IDENTIFICACAO DO IMOVEL (entre Nova Vistoria e Vistoria/Fotos, modo Completo) ===== -->
 <div id="s-identificacao" class="screen">
-  <div class="topbar"><button class="back" onclick="goTo('s-nova-vistoria')">&#8249; Voltar</button><h1>Identificação do Imóvel</h1></div>
+  <div class="topbar"><button class="back" onclick="goTo('s-vistoria')">&#8249; Voltar</button><h1>Identificação do Imóvel</h1></div>
   <div class="content">
     <div class="card"><h2>Informações Gerais</h2>
       <p style="font-size:12px;color:#888;margin-bottom:10px">Serviços públicos disponíveis no local. Desmarque apenas o que NÃO houver.</p>
@@ -403,25 +403,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
       </div>
     </div>
     <div class="card"><h2>Materiais</h2>
-      <div class="field"><label>Cobertura</label>
-        <select id="id-mat-cobertura">
-          <option value="">Selecione...</option>
-          <option value="Telhas de Barro">Telhas de Barro</option>
-          <option value="Telhas de Fibrocimento">Telhas de Fibrocimento</option>
-          <option value="Laje de Concreto">Laje de Concreto</option>
-          <option value="Outro">Outro</option>
-        </select>
+      <p style="font-size:12px;color:#888;margin-bottom:10px">Marque todas as opções que se aplicam.</p>
+      <div class="field"><label style="font-weight:600">Cobertura</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:6px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Telhas de Barro" style="width:18px;height:18px">Telhas de Barro</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Telhas de Fibrocimento" style="width:18px;height:18px">Telhas de Fibrocimento</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Laje de Concreto" style="width:18px;height:18px">Laje de Concreto</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Outro" style="width:18px;height:18px">Outro</label>
+        </div>
       </div>
-      <div class="field"><label>Paredes</label>
-        <select id="id-mat-paredes">
-          <option value="">Selecione...</option>
-          <option value="Blocos de Cimento">Blocos de Cimento</option>
-          <option value="Tijolos de Barro">Tijolos de Barro</option>
-          <option value="Outro">Outro</option>
-        </select>
+      <div class="field" style="margin-top:12px"><label style="font-weight:600">Paredes</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:6px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-par" value="Blocos de Cimento" style="width:18px;height:18px">Blocos de Cimento</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-par" value="Tijolos de Barro" style="width:18px;height:18px">Tijolos de Barro</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-par" value="Outro" style="width:18px;height:18px">Outro</label>
+        </div>
       </div>
     </div>
-    <button class="btn primary" onclick="confirmarIdentificacao()">Avançar para Vistoria</button>
+    <button class="btn primary" onclick="confirmarIdentificacao()">Avançar para Finalização</button>
     <p style="font-size:11px;color:#888;text-align:center;margin-top:10px">Todos os campos são opcionais. Você pode preencher depois.</p>
   </div>
 </div>
@@ -822,41 +821,46 @@ const ELEMENTO_TO_COL={
   "Esquadria":"portas"
 };
 
-// ===== LAUDO COMPLETO: 12 categorias A-L com subitens =====
+// ===== LAUDO COMPLETO: 12 categorias com subitens (cada patologia é um item separado) =====
+// Importante: o "cod" interno (A-L) permanece para mapear o checklist automático,
+// mas NUNCA é exibido na interface ou no PDF (decisão de UX: cliente vê apenas descrições).
 const PATOLOGIAS_AL=[
   {cod:"A",nome:"Estruturas",subs:[
-    {n:1,t:"Trincas / Fissuras"},{n:2,t:"Rachaduras"},{n:3,t:"Umidade / Mofo"},{n:4,t:"Danificado"},
-    {n:5,t:"Armadura Exposta"},{n:6,t:"Segregação / Ninhos"},{n:7,t:"Reparos / Remendos"},{n:8,t:"Infiltração / Umidade"}
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},
+    {n:6,t:"Infiltração"},{n:7,t:"Danificado"},{n:8,t:"Armadura Exposta"},
+    {n:9,t:"Segregação"},{n:10,t:"Ninhos"},{n:11,t:"Reparos"},{n:12,t:"Remendos"}
   ]},
   {cod:"B",nome:"Alvenaria",subs:[
-    {n:1,t:"Trincas / Fissuras"},{n:2,t:"Rachaduras"},{n:3,t:"Umidade / Mofo"},{n:4,t:"Danificada"}
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},{n:6,t:"Danificada"}
   ]},
   {cod:"C",nome:"Teto / Forro",subs:[
-    {n:1,t:"Trincas / Fissuras"},{n:2,t:"Rachaduras"},{n:3,t:"Umidade / Mofo"},{n:4,t:"Danificado"},{n:5,t:"Eflorescência"}
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},
+    {n:6,t:"Danificado"},{n:7,t:"Eflorescência"}
   ]},
   {cod:"D",nome:"Reboco / Revestimento",subs:[
-    {n:1,t:"Trincas / Fissuras"},{n:2,t:"Rachaduras"},{n:3,t:"Umidade / Mofo"},{n:4,t:"Danificado"},
-    {n:5,t:"Eflorescência"},{n:6,t:"Desplacamento"}
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},
+    {n:6,t:"Danificado"},{n:7,t:"Eflorescência"},{n:8,t:"Desplacamento"}
   ]},
   {cod:"E",nome:"Estr. Metálicas",subs:[
-    {n:1,t:"Trincas / Fissuras"},{n:2,t:"Rachaduras"},{n:3,t:"Oxidação"},{n:4,t:"Danificado"},{n:5,t:"Deformação"}
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Oxidação"},
+    {n:5,t:"Danificado"},{n:6,t:"Deformação"}
   ]},
   {cod:"F",nome:"Vidros",subs:[
     {n:1,t:"Trincado"},{n:2,t:"Quebrado"},{n:3,t:"Faltando"}
   ]},
   {cod:"G",nome:"Pintura",subs:[
-    {n:1,t:"Trincas / Fissuras"},{n:2,t:"Rachaduras"},{n:3,t:"Umidade / Mofo"},{n:4,t:"Danificado"},
-    {n:5,t:"Eflorescência"},{n:6,t:"Desplacamento"}
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},
+    {n:6,t:"Danificado"},{n:7,t:"Eflorescência"},{n:8,t:"Desplacamento"}
   ]},
   {cod:"H",nome:"Piso / Pavimento",subs:[
-    {n:1,t:"Trincas / Fissuras"},{n:2,t:"Rachaduras"},{n:3,t:"Umidade / Mofo"},{n:4,t:"Danificado"},
-    {n:5,t:"Recalque"},{n:6,t:"Solapamento"}
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},
+    {n:6,t:"Danificado"},{n:7,t:"Recalque"},{n:8,t:"Solapamento"}
   ]},
   {cod:"I",nome:"Portas / Caixilhos",subs:[
-    {n:1,t:"Umidade / Mofo"},{n:2,t:"Danificado"}
+    {n:1,t:"Umidade"},{n:2,t:"Mofo"},{n:3,t:"Danificado"}
   ]},
   {cod:"J",nome:"Telhados",subs:[
-    {n:1,t:"Danificado / Deformado"},{n:2,t:"Telhas Quebradas"},{n:3,t:"Telhas Faltando"},{n:4,t:"Madeir. Danificado"}
+    {n:1,t:"Danificado"},{n:2,t:"Deformado"},{n:3,t:"Telhas Quebradas"},{n:4,t:"Telhas Faltando"},{n:5,t:"Madeiramento Danificado"}
   ]},
   {cod:"K",nome:"Inst. Hidráulicas",subs:[
     {n:1,t:"Vazamento"},{n:2,t:"Danificada"}
@@ -2904,16 +2908,12 @@ window.criarVistoria=async()=>{
   if(selTipo)selTipo.value="Vista";
   // Limpar campo de observações no início (não persiste de uma vistoria pra outra)
   const obsEl=document.getElementById("v-obs");if(obsEl)obsEl.value=currentVistoria.observacoes||"";
-  // Inicializa identificacao vazia (sera preenchida na tela s-identificacao no modo completo)
+  // Inicializa identificacao vazia (sera preenchida na tela s-identificacao apos as fotos
+  // no modo completo). No simplificado fica null para sempre.
   currentVistoria.identificacao=currentVistoria.identificacao||null;
-  // MODO COMPLETO: passa pela tela "Identificação do Imóvel" antes das fotos.
-  // EXCEÇÃO: modo Ausente pula direto pra fachada (ninguém em casa, não dá pra inspecionar).
-  // SIMPLIFICADO: vai direto pra tela de fotos como sempre fez.
-  if(tipoLaudo==="completo"&&!window._iniciandoComoAusente){
-    resetFormIdentificacao();
-    goTo("s-identificacao");
-    return;
-  }
+  // Vai direto pra tela de fotos. No completo, a tela "Identificação do Imóvel" aparece
+  // APÓS as fotos (entre Vistoria e Finalização), porque o cadastrador precisa ter visto
+  // o imóvel inteiro antes de preencher materiais, garagem, serviços públicos etc.
   goTo("s-vistoria");renderFotos();
 };
 
@@ -2924,9 +2924,11 @@ function resetFormIdentificacao(){
     const el=document.getElementById(id);if(el)el.checked=true;
   });
   const z=document.getElementById("id-zoneamento");if(z)z.value="Misto";
-  ["id-garagem","id-pavimentos","id-mat-cobertura","id-mat-paredes"].forEach(id=>{
+  ["id-garagem","id-pavimentos"].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value="";
   });
+  // Materiais agora são checkboxes (seleção múltipla) — todos desmarcados por padrão
+  document.querySelectorAll(".id-mat-cob,.id-mat-par").forEach(cb=>cb.checked=false);
 }
 // Se a vistoria atual já tem dados de identificação salvos (ex: cadastrador clicou "Voltar"
 // na tela de fotos e voltou aqui pra ajustar), repreenche o formulário com esses dados.
@@ -2947,13 +2949,22 @@ function renderIdentificacao(){
   const z=document.getElementById("id-zoneamento");if(z)z.value=id.zoneamento||"Misto";
   const g=document.getElementById("id-garagem");if(g)g.value=id.garagem||"";
   const p=document.getElementById("id-pavimentos");if(p)p.value=id.pavimentos||"";
-  const mc=document.getElementById("id-mat-cobertura");if(mc)mc.value=(id.materiais&&id.materiais.cobertura)||"";
-  const mp=document.getElementById("id-mat-paredes");if(mp)mp.value=(id.materiais&&id.materiais.paredes)||"";
+  // Materiais: array de strings → marca os checkboxes correspondentes.
+  // Compatível com formato antigo (string única) — converte string em array.
+  const mc=id.materiais&&id.materiais.cobertura;
+  const mp=id.materiais&&id.materiais.paredes;
+  const arrCob=Array.isArray(mc)?mc:(mc?[mc]:[]);
+  const arrPar=Array.isArray(mp)?mp:(mp?[mp]:[]);
+  document.querySelectorAll(".id-mat-cob").forEach(cb=>cb.checked=arrCob.includes(cb.value));
+  document.querySelectorAll(".id-mat-par").forEach(cb=>cb.checked=arrPar.includes(cb.value));
 }
-// Coleta tudo do formulário, guarda em currentVistoria.identificacao e segue pra tela de fotos.
-// Todos os campos são opcionais — strings vazias ficam vazias mesmo.
+// Coleta tudo do formulário, guarda em currentVistoria.identificacao e segue.
+// Agora os MATERIAIS são ARRAYS (cobertura e paredes aceitam múltipla seleção).
+// Todos os campos são opcionais — arrays vazios e strings vazias ficam como tal.
 window.confirmarIdentificacao=()=>{
   if(!currentVistoria){alert("Sessão da vistoria foi perdida. Volte e reinicie.");return;}
+  const cobArr=Array.from(document.querySelectorAll(".id-mat-cob:checked")).map(cb=>cb.value);
+  const parArr=Array.from(document.querySelectorAll(".id-mat-par:checked")).map(cb=>cb.value);
   currentVistoria.identificacao={
     servicosPublicos:{
       energia:document.getElementById("id-sv-energia").checked,
@@ -2970,13 +2981,13 @@ window.confirmarIdentificacao=()=>{
     garagem:document.getElementById("id-garagem").value||"",
     pavimentos:document.getElementById("id-pavimentos").value||"",
     materiais:{
-      cobertura:document.getElementById("id-mat-cobertura").value||"",
-      paredes:document.getElementById("id-mat-paredes").value||""
+      cobertura:cobArr,
+      paredes:parArr
     }
   };
-  // Garante que o rascunho automático capture essa atualização também.
   if(typeof agendarSalvarRascunho==="function")agendarSalvarRascunho();
-  goTo("s-vistoria");renderFotos();
+  // Identificação preenchida → vai pra tela de Finalização (assinatura, status, etc).
+  goTo("s-finalizacao");
 };
 
 // Popula o select de ambiente com base + custom + extras temporários + opção "Novo cômodo".
@@ -4716,6 +4727,15 @@ window.irParaFinalizacao=()=>{
   if(total===0){
     if(!confirm("Nenhuma foto registrada nesta vistoria.\n\nDeseja prosseguir para a Finalização mesmo assim?\n\nSe foi uma vistoria ausente, use o botão laranja \"Ausente — Passível de Retorno\" no fim da tela."))return;
   }
+  // MODO COMPLETO: o cadastrador passa pela tela "Identificação do Imóvel" antes de finalizar.
+  // EXCEÇÃO: vistoria iniciada como Ausente (sem fotos) pula a Identificação — o imóvel
+  // não foi inspecionado mesmo, não há o que preencher.
+  const tipoLaudo=(currentVistoria&&currentVistoria.tipoLaudo)||"simplificado";
+  const ehAusenteSemFotos=(currentVistoria&&currentVistoria._modoAusente)&&total===0;
+  if(tipoLaudo==="completo"&&!ehAusenteSemFotos){
+    goTo("s-identificacao");
+    return;
+  }
   goTo("s-finalizacao");
 };
 
@@ -5661,6 +5681,8 @@ window.finalizarVistoria=async()=>{
     const logoSrc=prest.logo||LOGO_CONST;
     const logoPrep=await prepLogoForPDF(logoSrc,45,15);
     const tipoLaudo=currentVistoria.tipoLaudo||"simplificado";
+    // Log diagnóstico — ajuda a entender quando o PDF sai como "simplificado" sem dever
+    console.log("[finalizarVistoria] tipoLaudo=",tipoLaudo,"identificacao=",!!currentVistoria.identificacao,"obsConclusao=",!!currentVistoria.observacoesConclusao);
 
     // === LAUDO COMPLETO: gera páginas 1-8 (capa, dados, metodologia, conclusão,
     // encerramento, anexos I e II) ANTES das páginas de fotos.
@@ -6616,8 +6638,11 @@ function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
   pdf.text("2.0 DESCRIÇÃO DO IMÓVEL",ML,y);y+=5;
   const tipoSel=(v.tipo||"").toLowerCase();
   const garagSel=(id.garagem||"").toLowerCase();
-  const coberSel=(id.materiais&&id.materiais.cobertura||"").toLowerCase();
-  const parSel=(id.materiais&&id.materiais.paredes||"").toLowerCase();
+  // Materiais agora são arrays (seleção múltipla). Compat: aceita string antiga.
+  const _mc=id.materiais&&id.materiais.cobertura;
+  const _mp=id.materiais&&id.materiais.paredes;
+  const coberArr=Array.isArray(_mc)?_mc.map(s=>s.toLowerCase()):(_mc?[String(_mc).toLowerCase()]:[]);
+  const parArr=Array.isArray(_mp)?_mp.map(s=>s.toLowerCase()):(_mp?[String(_mp).toLowerCase()]:[]);
   const estadoSel=(v.estado||"").toLowerCase();
   // 2 colunas: esquerda Tipo+Garagem+Cobertura+Paredes  | direita: Pavimentos+Idade+Estado
   const cW2=CW/2;
@@ -6644,11 +6669,11 @@ function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
   yi+=5;
   pdf.setFont("helvetica","bold");pdf.text("Cobertura:",ML+2,yi);yi+=4.5;pdf.setFont("helvetica","normal");
   const coberOpc=["Telhas de Barro","Telhas de Fibrocimento","Laje de Concreto"];
-  coberOpc.forEach(opt=>{const m=opt.toLowerCase()===coberSel;pdf.text((m?"[X] ":"[ ] ")+opt,ML+4,yi);yi+=4.2;});
+  coberOpc.forEach(opt=>{const m=coberArr.includes(opt.toLowerCase());pdf.text((m?"[X] ":"[ ] ")+opt,ML+4,yi);yi+=4.2;});
   yi+=1;
   pdf.setFont("helvetica","bold");pdf.text("Paredes:",ML+2,yi);yi+=4.5;pdf.setFont("helvetica","normal");
   const parOpc=["Blocos de Cimento","Tijolos de Barro"];
-  parOpc.forEach(opt=>{const m=opt.toLowerCase()===parSel;pdf.text((m?"[X] ":"[ ] ")+opt,ML+4,yi);yi+=4.2;});
+  parOpc.forEach(opt=>{const m=parArr.includes(opt.toLowerCase());pdf.text((m?"[X] ":"[ ] ")+opt,ML+4,yi);yi+=4.2;});
   // Coluna direita
   yi=y+9;
   pdf.setFont("helvetica","bold");pdf.text("Nº de pavimentos:",ML+cW2+2,yi);pdf.setFont("helvetica","normal");
