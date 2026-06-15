@@ -473,6 +473,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
       <div class="field"><label>Estado de Conservacao</label><select id="fin-estado"><option>Bom</option><option selected>Regular</option><option>Ruim</option><option>Péssimo</option></select></div>
       <div class="field"><label>Idade Aparente do Imóvel (anos) *</label><input type="number" id="fin-idade" placeholder="Ex: 30" min="0" max="200" inputmode="numeric" required></div>
     </div>
+    <div class="card" id="card-observacoes-conclusao" style="display:none"><h2>Observações Adicionais</h2>
+      <p style="font-size:12px;color:#888;margin-bottom:8px">Texto livre que será anexado ao final da conclusão do laudo. Opcional.</p>
+      <textarea id="fin-obs-conclusao" rows="4" placeholder="Ex: Recomenda-se nova vistoria em 6 meses. Imóvel apto para locação com ressalvas." style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-family:inherit;font-size:14px;resize:vertical"></textarea>
+    </div>
     <div class="card" id="card-assinatura-resp"><h2>Assinatura do responsavel pelo imovel</h2>
       <div id="assin-info" style="font-size:13px;color:#555;line-height:1.8;margin-bottom:14px;padding:12px;background:#f9f9f9;border-radius:8px"></div>
       <p style="font-size:13px;color:#888;margin-bottom:8px;font-weight:500">Assine abaixo:</p>
@@ -2250,19 +2254,16 @@ window.efSubstituir=(gi,amb)=>{
 // Intercepta salvarFotoFinal quando estamos em modo editor
 const _origSalvarFotoFinal=window.salvarFotoFinal||null;
 function salvarFotoFinalEditor(dataUrl,patologias,combinacoes){
-  const tipoLaudo=(currentVistoria&&currentVistoria.tipoLaudo)||"simplificado";
   const temPat=combinacoes&&combinacoes.length;
   const tipo=temPat?"Detalhe":"Vista";
-  let legendaCalc;
-  if(tipoLaudo==="completo"){
-    legendaCalc=tipo; // sempre Vista/Detalhe; código vai sobre a imagem
-  } else {
-    legendaCalc=temPat?unificarLegendasCombos(combinacoes):"Vista";
-  }
+  // Ambos os modos (simplificado e completo) usam descrição textual unificada na legenda.
+  // No completo a categoria entra na descrição ("Trincas em Alvenaria"), no simplificado
+  // o elemento ("Parede: Trinca"). A função unificarLegendasCombos cuida da diferença.
+  const legendaCalc=temPat?unificarLegendasCombos(combinacoes):"Vista";
   if(_efCameraMode==="adicionar"){
     _efFotos.push({dataUrl,ambiente:_efAmbienteAlvo,tipo,legenda:legendaCalc,combinacoes:combinacoes||[]});
   } else if(_efCameraMode==="substituir"&&_efSubstIdx!==null){
-    const legendaSubst=tipoLaudo==="completo"?legendaCalc:(temPat?legendaCalc:(_efFotos[_efSubstIdx]&&_efFotos[_efSubstIdx].legenda||"Vista"));
+    const legendaSubst=temPat?legendaCalc:(_efFotos[_efSubstIdx]&&_efFotos[_efSubstIdx].legenda||"Vista");
     _efFotos[_efSubstIdx]={..._efFotos[_efSubstIdx],dataUrl,legenda:legendaSubst,combinacoes:combinacoes||[]};
   }
   _efCameraMode=null;_efAmbienteAlvo=null;_efSubstIdx=null;
@@ -3980,8 +3981,8 @@ function abrirModalPatologiasSimplificado(){
 }
 
 function abrirModalPatologiasCompleto(){
-  document.getElementById("pat-label-1").textContent="1. Categoria";
-  document.getElementById("pat-label-2").textContent="2. Subitens";
+  document.getElementById("pat-label-1").textContent="Elemento construtivo";
+  document.getElementById("pat-label-2").textContent="Tipos de patologia";
   document.getElementById("pat-elem-wrap").style.display="none";
   // Resetar estilos que o modo simplificado pode ter aplicado
   const partGrid=document.getElementById("part-grid");
@@ -3994,7 +3995,7 @@ function abrirModalPatologiasCompleto(){
   // Grid de categorias A–L
   PATOLOGIAS_AL.forEach(cat=>{
     const btn=document.createElement("button");btn.className="part-btn";
-    btn.innerHTML='<b>'+cat.cod+'</b> '+cat.nome;
+    btn.innerHTML=cat.nome;
     btn.dataset.cod=cat.cod;
     btn.onclick=()=>{
       document.querySelectorAll("#part-grid .part-btn").forEach(b=>b.classList.remove("selected"));
@@ -4015,7 +4016,7 @@ function renderSubitensCompleto(cod){
     const item=document.createElement("div");item.className="pat-item";
     const cb=document.createElement("input");cb.type="checkbox";cb.id="pat-cb-"+cod+s.n;cb.value=s.n;
     const lbl=document.createElement("label");lbl.htmlFor="pat-cb-"+cod+s.n;
-    lbl.innerHTML='<b>'+cod+s.n+'</b> '+s.t;
+    lbl.innerHTML=s.t;
     item.appendChild(cb);item.appendChild(lbl);
     item.onclick=e=>{if(e.target!==cb)cb.checked=!cb.checked;};
     list.appendChild(item);
@@ -4073,7 +4074,9 @@ function gerarLegendaCombo(c){
   if(c.modo==="completo"){
     const cat=PATOLOGIAS_AL_MAP[c.categoria];
     const subStr=c.subs.map(n=>{const s=cat.subs.find(x=>x.n===n);return s?s.t:"?";}).join(" / ");
-    return c.codigo+" — "+subStr;
+    // Categoria "Outros" não fica natural ao ler "Outros em Outros" — só mostra o subitem
+    if(c.categoria==="L")return subStr;
+    return subStr+" em "+cat.nome;
   }
   // Simplificado: patologias separadas por " / " (com espaço antes e depois)
   // Ex: "Parede: Fissura / Umidade / Trinca"
@@ -4081,16 +4084,32 @@ function gerarLegendaCombo(c){
   return c.elemento+": "+patsStr;
 }
 
-// Unifica várias combinações da MESMA foto numa legenda só, agrupando por elemento
-// e deduplicando patologias. Ex: [{Parede,[Trinca]}, {Teto,[Trinca]}, {Parede,[Trinca]}]
-// → "Parede: Trinca / Teto: Trinca" (sem repetição).
-// Aplica-se apenas ao modo Simplificado — Completo mantém código CNRP por seta.
+// Unifica várias combinações da MESMA foto numa legenda só, agrupando por categoria
+// e deduplicando subitens dentro de cada categoria.
+// Ex: [{Alvenaria,[Trinca,Umidade]}, {Pintura,[Desplacamento]}, {Alvenaria,[Trinca]}]
+// → "Trincas / Fissuras / Umidade em Alvenaria / Desplacamento em Pintura"
 function unificarLegendasCombos(combinacoes){
   if(!combinacoes||!combinacoes.length)return "";
-  // Modo completo: cada seta tem seu código próprio, não unifica
   const temCompleto=combinacoes.some(c=>c.modo==="completo");
   if(temCompleto){
-    return combinacoes.map(c=>gerarLegendaCombo(c)).join(" / ");
+    // Agrupar por categoria, deduplicar subitens (idêntico ao simplificado mas com categoria)
+    const ordemCat=[];
+    const grupos={};
+    combinacoes.forEach(c=>{
+      if(c.modo!=="completo")return;
+      const cat=PATOLOGIAS_AL_MAP[c.categoria];if(!cat)return;
+      if(!grupos[c.categoria]){grupos[c.categoria]={subs:[],set:new Set(),nome:cat.nome};ordemCat.push(c.categoria);}
+      c.subs.forEach(n=>{
+        const s=cat.subs.find(x=>x.n===n);if(!s)return;
+        if(!grupos[c.categoria].set.has(s.t)){grupos[c.categoria].set.add(s.t);grupos[c.categoria].subs.push(s.t);}
+      });
+    });
+    return ordemCat.map(cod=>{
+      const g=grupos[cod];
+      const subStr=g.subs.join(" / ");
+      if(cod==="L")return subStr; // "Outros" não recebe "em Outros"
+      return subStr+" em "+g.nome;
+    }).join(" / ");
   }
   // Simplificado: agrupar por elemento, deduplicar patologias, preservar ordem
   const ordemElem=[];
@@ -4110,6 +4129,108 @@ function unificarLegendasCombos(combinacoes){
     c.pats.forEach(p=>{if(!grupos[c.elemento].set.has(p)){grupos[c.elemento].set.add(p);grupos[c.elemento].pats.push(p);}});
   });
   return ordemElem.map(el=>el+": "+grupos[el].pats.join(" / ")).join(" / ");
+}
+
+// ===== LAUDO COMPLETO: helpers para conclusão e checklist =====
+
+// Retorna preposição contextual ("Na fachada", "No corredor", "Nos dormitórios").
+// Heurística: termina em "s" → plural ("Nos/Nas"); termina em "a" sem ser plural → feminino ("Na");
+// resto → masculino ("No"). Sem exceção manual — regra geral cobre os casos comuns
+// (Fachada, Sala, Cozinha, Área de serviço, Banheiro, Corredor, Dormitório, Quintal, Garagem).
+function _preposicaoAmbiente(amb){
+  if(!amb)return "Em";
+  const limpo=amb.toLowerCase().trim();
+  const ehPlural=limpo.endsWith("s")&&!limpo.endsWith("ês"); // "dormitórios", "banheiros"
+  const ultima=limpo.charAt(limpo.length-(ehPlural?2:1));
+  const ehFem=ultima==="a";
+  if(ehPlural)return ehFem?"Nas":"Nos";
+  return ehFem?"Na":"No";
+}
+
+// Lê todas as fotos da vistoria atual, agrupa por ambiente preservando a ordem em que apareceram
+// nas fotos, deduplica patologias dentro de cada ambiente. Retorna array {ambiente, descricao}.
+function _agruparPatologiasPorAmbiente(fotosObj){
+  const ordemAmb=[];
+  const gruposAmb={}; // amb -> {catCods:[], gruposPorCat:{cod:{nome,subs:[],set:Set}}}
+  Object.values(fotosObj||{}).forEach(f=>{
+    if(!f||!f.combinacoes||!f.combinacoes.length)return;
+    const amb=f.ambiente||"Outros";
+    if(!gruposAmb[amb]){gruposAmb[amb]={catCods:[],gruposPorCat:{}};ordemAmb.push(amb);}
+    const ga=gruposAmb[amb];
+    f.combinacoes.forEach(c=>{
+      if(c.modo!=="completo")return;
+      const cat=PATOLOGIAS_AL_MAP[c.categoria];if(!cat)return;
+      if(!ga.gruposPorCat[c.categoria]){ga.gruposPorCat[c.categoria]={nome:cat.nome,subs:[],set:new Set()};ga.catCods.push(c.categoria);}
+      const g=ga.gruposPorCat[c.categoria];
+      c.subs.forEach(n=>{
+        const s=cat.subs.find(x=>x.n===n);if(!s)return;
+        if(!g.set.has(s.t)){g.set.add(s.t);g.subs.push(s.t);}
+      });
+    });
+  });
+  // Montar descrição de cada ambiente (categorias na ordem, subitens deduplicados)
+  return ordemAmb.filter(amb=>gruposAmb[amb].catCods.length).map(amb=>{
+    const ga=gruposAmb[amb];
+    const partes=ga.catCods.map(cod=>{
+      const g=ga.gruposPorCat[cod];
+      const subsLower=g.subs.map(s=>s.toLowerCase()).join(" e ");
+      if(cod==="L")return subsLower;
+      return subsLower+" em "+g.nome.toLowerCase();
+    });
+    return {ambiente:amb,descricao:partes.join(", ")};
+  });
+}
+
+// Monta o parágrafo único da conclusão do laudo completo.
+// Estrutura: "A edificação é um imóvel <ocupação>, apresentando grau de conservação <estado>.
+// Na fachada, foram observadas <desc>. Na cozinha, foram observadas <desc>. ...
+// <observações adicionais do cadastrador, se houver>."
+function gerarConclusaoAutomatica(){
+  if(!currentVistoria)return "";
+  // Ocupação em minúsculo, removendo plural quando soa estranho ("residencial" não tem plural,
+  // mas o select usa "Residencial" capitalizado).
+  const ocupacao=(currentVistoria.ocupacao||"residencial").toLowerCase();
+  const estado=(currentVistoria.estado||"regular").toLowerCase();
+  let texto="A edificação é um imóvel "+ocupacao+", apresentando grau de conservação "+estado+".";
+  const grupos=_agruparPatologiasPorAmbiente(fotosPendentes);
+  grupos.forEach(g=>{
+    const prep=_preposicaoAmbiente(g.ambiente);
+    texto+=" "+prep+" "+g.ambiente.toLowerCase()+", foram observadas "+g.descricao+".";
+  });
+  // Observações livres do cadastrador (opcional) anexadas no final
+  const extra=(currentVistoria.observacoesConclusao||"").trim();
+  if(extra)texto+=" "+extra;
+  return texto;
+}
+
+// Mapeamento (categoria interna A-L → linha do checklist do Anexo I).
+// Usado para preencher automaticamente a tabela "Especificação / Danos".
+const _CHECKLIST_MAP={
+  A:"Estruturas", E:"Estruturas",
+  B:"Paredes e Muros", D:"Paredes e Muros", G:"Paredes e Muros",
+  C:"Coberturas / Tetos", J:"Coberturas / Tetos",
+  F:"Portas e Esquadrias", I:"Portas e Esquadrias",
+  H:"Pisos e Calçamentos",
+  K:"Equipamentos", L:"Equipamentos"
+};
+const _CHECKLIST_LINHAS=["Estruturas","Paredes e Muros","Coberturas / Tetos","Portas e Esquadrias","Pisos e Calçamentos","Equipamentos (antenas parabólicas, etc.)"];
+
+// Retorna objeto {linha → boolean} com base nas patologias anotadas em todas as fotos.
+// "Equipamentos (antenas parabólicas, etc.)" no map é tratada via prefixo "Equipamentos".
+function calcularChecklistDanos(fotosObj){
+  const out={};
+  _CHECKLIST_LINHAS.forEach(l=>out[l]=false);
+  Object.values(fotosObj||{}).forEach(f=>{
+    if(!f||!f.combinacoes)return;
+    f.combinacoes.forEach(c=>{
+      if(c.modo!=="completo")return;
+      const linhaBase=_CHECKLIST_MAP[c.categoria];if(!linhaBase)return;
+      // "Equipamentos (antenas parabólicas, etc.)" começa com "Equipamentos"
+      const linhaReal=_CHECKLIST_LINHAS.find(l=>l===linhaBase||l.indexOf(linhaBase+" ")===0);
+      if(linhaReal)out[linhaReal]=true;
+    });
+  });
+  return out;
 }
 
 window.removerCombinacao=i=>{_patCombinacoes.splice(i,1);renderCombinacoes();};
@@ -4260,11 +4381,8 @@ function renderizarFotoComAcumuladas(tipoLaudo){
     // Se a seta foi rotacionada na edição, p.angle estará definido
     const ang=(typeof s.pontoFracao.angle==="number")?s.pontoFracao.angle:undefined;
     desenharSetaEmCanvas(ctx,tipX,tipY,origW,ang);
-    if(tipoLaudo==="completo"){
-      const c=s.combinacao;
-      const codigo=c&&c.modo==="completo"?c.codigo:(c&&c.codigo);
-      if(codigo)desenharCodigoCNRP(ctx,tipX,tipY,codigo,origW,ang);
-    }
+    // Decisão: no completo NÃO desenhamos a caixinha vermelha com código (A1, B3 etc).
+    // Patologia aparece SOMENTE na legenda da foto, em texto. Igual ao simplificado.
   });
   return outCanvas.toDataURL("image/jpeg",0.92);
 }
@@ -4540,6 +4658,12 @@ function renderFinalizacao(){
     const el=document.getElementById(id);
     if(el)el.value=val;
   });
+  // Exibir card de Observações Adicionais apenas no laudo Completo
+  const tipoLaudo=(currentVistoria&&currentVistoria.tipoLaudo)||"simplificado";
+  const cardObs=document.getElementById("card-observacoes-conclusao");
+  if(cardObs)cardObs.style.display=tipoLaudo==="completo"?"":"none";
+  const obsEl=document.getElementById("fin-obs-conclusao");
+  if(obsEl)obsEl.value=(currentVistoria&&currentVistoria.observacoesConclusao)||"";
   // Sincronizar a UI de "pendente_retorno" (campo só aparece quando status=ausente)
   if(typeof togglePendente==="function"){
     try{togglePendente(document.getElementById("fin-status-vistoria").value);}catch(e){}
@@ -5437,6 +5561,9 @@ window.finalizarVistoria=async()=>{
     currentVistoria.estado=document.getElementById("fin-estado").value;
     currentVistoria.idade=document.getElementById("fin-idade").value;
     currentVistoria.statusVistoria=document.getElementById("fin-status-vistoria").value||"concluida";
+    // Observações adicionais (laudo completo) — anexadas ao final da conclusão automática
+    const obsConclEl=document.getElementById("fin-obs-conclusao");
+    currentVistoria.observacoesConclusao=obsConclEl?(obsConclEl.value||"").trim():"";
   }
   const isPendente=!window._modoRegerar&&currentVistoria.statusVistoria==="ausente"&&document.getElementById("fin-pendente")&&document.getElementById("fin-pendente").value==="sim";
   currentVistoria.pendente_retorno=isPendente;
@@ -5533,6 +5660,21 @@ window.finalizarVistoria=async()=>{
     const prest=prestadorDefault||{nome:"CNRP ARQUITETURA E CONSTRUÇÕES LTDA.",cnpj:"22.121.094/0001-90",endereco:"Av. Marechal Eurico Gaspar Dutra, nº 1292 | Santana | São Paulo – SP | CEP 02239-010",email:"ronaldopinto@rbarquitetura.com"};
     const logoSrc=prest.logo||LOGO_CONST;
     const logoPrep=await prepLogoForPDF(logoSrc,45,15);
+    const tipoLaudo=currentVistoria.tipoLaudo||"simplificado";
+
+    // === LAUDO COMPLETO: gera páginas 1-8 (capa, dados, metodologia, conclusão,
+    // encerramento, anexos I e II) ANTES das páginas de fotos.
+    // A página 9+ é o relatório fotográfico, gerado pelo mesmo loop do simplificado,
+    // mas com cabeçalho enxuto (_pdfHeaderFotosCompleto) em vez do pdfHeader cheio.
+    if(tipoLaudo==="completo"){
+      setStatus("Gerando capa e anexos...");
+      try{
+        await gerarPDFCompletoPaginasContexto(pdf,currentVistoria,prest,logoPrep,PW,PH,ML,MT,MR,MB,CW);
+      }catch(eCompl){
+        console.error("Erro ao gerar páginas de contexto do laudo completo:",eCompl);
+        // Não aborta: ainda gera o fotográfico para o cliente não perder o trabalho
+      }
+    }
 
     // === MONTAGEM DAS PAGINAS ===
     // Pg1: fachada (faixa 1, largura total) + 2 faixas de par = 5 fotos
@@ -5548,19 +5690,32 @@ window.finalizarVistoria=async()=>{
 
     let fotoNum=1;
     for(let pg=0;pg<pagFotos.length;pg++){
-      if(pg>0)pdf.addPage();
+      // No completo SEMPRE addPage (porque há páginas de contexto antes); no simplificado
+      // só a partir da segunda página de fotos.
+      if(tipoLaudo==="completo"||pg>0)pdf.addPage();
       const pF=pagFotos[pg].fotos;
       const isP=pagFotos[pg].isPrimeira;
       const locais=[...new Set(pF.map(f=>f.ambiente))];
-      pdfHeader(pdf,ML,PW,CW,currentVistoria,locais.join(" / "),logoSrc,HDR,MT,logoPrep);
-      let y=Y0;
+      // Cabeçalho: enxuto no completo, completo no simplificado
+      let YinicialFotos;
+      if(tipoLaudo==="completo"){
+        const e=currentVistoria.endereco||{};
+        const enderecoLinha=[e.rua,e.num?"nº "+e.num:"",e.bairro,e.cidade||"São Paulo"].filter(Boolean).join(", ");
+        YinicialFotos=_pdfHeaderFotosCompleto(pdf,ML,MT,CW,enderecoLinha,currentVistoria.data||"")+2;
+      } else {
+        pdfHeader(pdf,ML,PW,CW,currentVistoria,locais.join(" / "),logoSrc,HDR,MT,logoPrep);
+        YinicialFotos=Y0;
+      }
+      let y=YinicialFotos;
+      // PGB local (limite inferior) — igual nos dois modos
+      const PGBlocal=PGB;
 
       if(isP&&pF.length>0){
         // Pg1: faixa 1 = fachada (largura total), faixas 2-3 = pares
         // Calcular alturas para preencher PGB exatamente
         // 3 faixas: F01H + LEGH + 2*(FPH + LEGH) = PGB - Y0
         // F01H = (PGB-Y0 - 3*LEGH) * 0.4  FPH = (PGB-Y0 - 3*LEGH) * 0.3
-        const totalH=PGB-Y0;
+        const totalH=PGBlocal-YinicialFotos;
         const totalImgH=totalH-3*LEGH;
         const F01H=Math.floor(totalImgH*0.40);
         const FPH=Math.floor(totalImgH*0.30);
@@ -5597,7 +5752,7 @@ window.finalizarVistoria=async()=>{
         }
       } else {
         // Pg2+: 3 faixas de par, altura igual dividindo o espaço disponível
-        const totalH=PGB-Y0;
+        const totalH=PGBlocal-YinicialFotos;
         const FPH=Math.floor((totalH-3*LEGH)/3);
         for(let i=0;i<pF.length;i+=2){
           const count=Math.min(2,pF.length-i);
@@ -5810,7 +5965,7 @@ window.finalizarVistoria=async()=>{
     }
     // Salvar Firebase (sem fotos — fotos vão para IndexedDB local-only) + download
     // OBS: assinaturaResp gravada no Firestore (necessária para regerar comprovante depois).
-    const vDoc={clienteId:currentVistoria.clienteId,coletorId:currentVistoria.coletorId,clienteNome:currentVistoria.clienteNome,clienteRRT:currentVistoria.clienteRRT,coletorNome:currentVistoria.coletorNome,responsavel:currentVistoria.responsavel,endereco:currentVistoria.endereco,ocupacao:currentVistoria.ocupacao,tipo:currentVistoria.tipo,tipoLaudo:currentVistoria.tipoLaudo||"simplificado",estado:currentVistoria.estado,idade:currentVistoria.idade,data:currentVistoria.data,dataCompleta:currentVistoria.dataCompleta,userId:currentUser.uid,checklist:currentVistoria.checklist,ambientesExtras:ambientesExtras||[],observacoes:currentVistoria.observacoes,identificacao:currentVistoria.identificacao||null,totalFotos:Object.keys(fotosPendentes).length,status:currentVistoria.statusVistoria||"concluida",pendente_retorno:isPendente,visitas:currentVistoria.visitas||1,criadoEm:serverTimestamp(),assinaturaResp:assinaturaData||null};
+    const vDoc={clienteId:currentVistoria.clienteId,coletorId:currentVistoria.coletorId,clienteNome:currentVistoria.clienteNome,clienteRRT:currentVistoria.clienteRRT,coletorNome:currentVistoria.coletorNome,responsavel:currentVistoria.responsavel,endereco:currentVistoria.endereco,ocupacao:currentVistoria.ocupacao,tipo:currentVistoria.tipo,tipoLaudo:currentVistoria.tipoLaudo||"simplificado",estado:currentVistoria.estado,idade:currentVistoria.idade,data:currentVistoria.data,dataCompleta:currentVistoria.dataCompleta,userId:currentUser.uid,checklist:currentVistoria.checklist,ambientesExtras:ambientesExtras||[],observacoes:currentVistoria.observacoes,observacoesConclusao:currentVistoria.observacoesConclusao||"",identificacao:currentVistoria.identificacao||null,totalFotos:Object.keys(fotosPendentes).length,status:currentVistoria.statusVistoria||"concluida",pendente_retorno:isPendente,visitas:currentVistoria.visitas||1,criadoEm:serverTimestamp(),assinaturaResp:assinaturaData||null};
     // data_finalizacao: gravada apenas quando a vistoria está sendo finalizada (não pendente).
     // Esse campo serve à coluna "Data da vistoria" da planilha do cliente e nunca deve ser
     // sobrescrito em edições posteriores — preserva o momento real da finalização.
@@ -6328,6 +6483,403 @@ function pdfFooter(pdf,PW,PH,ML,MR,MB,p){
   pdf.text((p.cnpj?"CNPJ: "+p.cnpj:"")+(p.email?"  |  "+p.email:""),PW/2,footTop+10.5,{align:"center"});
   pdf.setTextColor(0,0,0);
 }
+
+// ============================================================================
+// LAUDO COMPLETO — Gerador de PDF próprio (separado do simplificado).
+// Recebe (pdf, prest, logoPrep) e MONTA todas as páginas de contexto (1-9 do CNRP).
+// Depois delega as páginas de fotos ao mesmo loop do simplificado (chamado de fora).
+// Constantes de layout idênticas ao simplificado para consistência visual.
+// ============================================================================
+
+// Rodapé padrão das páginas de texto do completo (com prestador atual centralizado e nº página)
+function _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,paginaNum,totalPaginas){
+  const footTop=PH-MB-3;
+  pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
+  pdf.rect(ML,footTop-2,PW-ML-MR,8,"S");
+  pdf.setFont("helvetica","bold");pdf.setFontSize(9);
+  const nomeEmpresa=(prest&&prest.nome)||"CTB ENGENHARIA CAUTELAR";
+  pdf.text(nomeEmpresa,ML+3,footTop+3);
+  pdf.setFont("helvetica","normal");pdf.setFontSize(9);
+  pdf.text("pág. "+paginaNum,PW-MR-3,footTop+3,{align:"right"});
+}
+
+// Cabeçalho enxuto das páginas de FOTOS do completo: barra "Local: ... | Data Vistoria: ..."
+// Substitui o pdfHeader cheio (com bloco do responsável) usado no simplificado.
+function _pdfHeaderFotosCompleto(pdf,ML,MT,CW,enderecoStr,dataVistoria){
+  const H=8;
+  pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
+  pdf.rect(ML,MT,CW,H,"S");
+  pdf.line(ML+CW*0.7,MT,ML+CW*0.7,MT+H);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(9);
+  pdf.text("Local: ",ML+2,MT+5.3);
+  pdf.setFont("helvetica","normal");
+  const txtLocal=pdf.splitTextToSize(enderecoStr||"",CW*0.7-14)[0]||"";
+  pdf.text(txtLocal,ML+12,MT+5.3);
+  pdf.setFont("helvetica","bold");
+  pdf.text("Data: ",ML+CW*0.7+2,MT+5.3);
+  pdf.setFont("helvetica","normal");
+  pdf.text(dataVistoria||"",ML+CW*0.7+12,MT+5.3);
+  return MT+H;
+}
+
+// Página de texto do completo: aplica cabeçalho/título e devolve y inicial pra escrever conteúdo
+function _pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW){
+  // Título superior fixo: "LAUDO DE VISTORIA CAUTELAR" (alinhado à direita do cabeçalho)
+  pdf.setFont("helvetica","bold");pdf.setFontSize(10);
+  pdf.text("LAUDO DE VISTORIA CAUTELAR",PW-MR,MT+2,{align:"right"});
+  return MT+8;
+}
+
+// Quebra linha automática para texto longo (jsPDF.splitTextToSize). Devolve nova y.
+function _pdfTextoBloco(pdf,texto,x,y,maxW,fontSize,linhaH,bold){
+  pdf.setFont("helvetica",bold?"bold":"normal");pdf.setFontSize(fontSize||10);
+  const linhas=pdf.splitTextToSize(texto||"",maxW);
+  linhas.forEach(l=>{pdf.text(l,x,y);y+=linhaH||5;});
+  return y;
+}
+
+// Verifica se há espaço suficiente na página; se não, addPage e retorna nova y (MT+8)
+function _pdfGarantirEspaco(pdf,y,minH,PH,MB,MT){
+  if(y+minH>PH-MB-12){pdf.addPage();return MT+8;}
+  return y;
+}
+
+// === ANEXO I: tabela de identificação do imóvel preenchida com dados da vistoria atual ===
+function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
+  let y=_pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW);
+  // Título
+  pdf.setFont("helvetica","bold");pdf.setFontSize(13);
+  pdf.text("IDENTIFICAÇÃO DO IMÓVEL",PW/2,y+4,{align:"center"});y+=10;
+  // Linha endereço
+  const e=v.endereco||{};
+  pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
+  const linhaH=6;
+  pdf.rect(ML,y,CW,linhaH,"S");
+  pdf.setFont("helvetica","normal");pdf.setFontSize(9);
+  pdf.text("Rua: "+(e.rua||""),ML+2,y+4);
+  pdf.text("Nº "+(e.num||""),ML+CW*0.7,y+4);
+  y+=linhaH;
+  pdf.rect(ML,y,CW,linhaH,"S");
+  pdf.text("Bairro: "+(e.bairro||""),ML+2,y+4);
+  pdf.text("Complemento: "+(e.comp||""),ML+CW*0.5,y+4);
+  y+=linhaH+4;
+
+  // === 1.0 INFORMAÇÕES GERAIS — 3 colunas (Serviços | Ocupação | Zoneamento) ===
+  pdf.setFont("helvetica","bold");pdf.setFontSize(10);
+  pdf.text("1.0 INFORMAÇÕES GERAIS",ML,y);y+=5;
+  const id=v.identificacao||{};
+  const sp=id.servicosPublicos||{};
+  const ocupSel=(v.ocupacao||"").toLowerCase();
+  const zoneSel=(id.zoneamento||"").toLowerCase();
+  const colW=CW/3;
+  const yIniInfo=y;
+  const altInfo=55;
+  pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
+  pdf.rect(ML,y,CW,altInfo,"S");
+  pdf.line(ML+colW,y,ML+colW,y+altInfo);
+  pdf.line(ML+2*colW,y,ML+2*colW,y+altInfo);
+  // Cabeçalhos
+  pdf.setFont("helvetica","bold");pdf.setFontSize(9);
+  pdf.text("Serviços Públicos",ML+colW/2,y+4,{align:"center"});
+  pdf.text("Tipo de Ocupação",ML+colW+colW/2,y+4,{align:"center"});
+  pdf.text("Zoneamento",ML+2*colW+colW/2,y+4,{align:"center"});
+  pdf.line(ML,y+5.5,ML+CW,y+5.5);
+  // Conteúdo coluna 1: serviços
+  pdf.setFont("helvetica","normal");pdf.setFontSize(8);
+  const servItens=[
+    ["Energia Elétrica",sp.energia!==false],["Iluminação Pública",sp.iluminacao!==false],
+    ["Pavimentação",sp.pavimentacao!==false],["Guias e Sarjetas",sp.guias!==false],
+    ["Gás Encanado",sp.gas!==false],["Rede Telefônica",sp.telefone!==false],
+    ["Rede de Água",sp.agua!==false],["Rede de Esgoto",sp.esgoto!==false],
+    ["Rede Pluviais",sp.drenagem!==false]
+  ];
+  let yi=y+9;
+  servItens.forEach(([txt,marc])=>{pdf.text((marc?"[X] ":"[ ] ")+txt,ML+2,yi);yi+=4.6;});
+  // Conteúdo coluna 2: ocupação (lista das opções do select da Nova Vistoria)
+  const ocupOpcoes=["Residencial","Comercial","Industrial","Institucional","Religioso","Serviços","Outros"];
+  yi=y+9;
+  ocupOpcoes.forEach(opt=>{
+    const marc=opt.toLowerCase()===ocupSel;
+    pdf.text((marc?"[X] ":"[ ] ")+opt,ML+colW+2,yi);yi+=4.6;
+  });
+  // Conteúdo coluna 3: zoneamento
+  const zoneOpcoes=["Residencial","Comercial","Industrial","Misto"];
+  yi=y+9;
+  zoneOpcoes.forEach(opt=>{
+    const marc=opt.toLowerCase()===zoneSel;
+    pdf.text((marc?"[X] ":"[ ] ")+opt,ML+2*colW+2,yi);yi+=4.6;
+  });
+  y+=altInfo+4;
+
+  // === 2.0 DESCRIÇÃO DO IMÓVEL ===
+  pdf.setFont("helvetica","bold");pdf.setFontSize(10);
+  pdf.text("2.0 DESCRIÇÃO DO IMÓVEL",ML,y);y+=5;
+  const tipoSel=(v.tipo||"").toLowerCase();
+  const garagSel=(id.garagem||"").toLowerCase();
+  const coberSel=(id.materiais&&id.materiais.cobertura||"").toLowerCase();
+  const parSel=(id.materiais&&id.materiais.paredes||"").toLowerCase();
+  const estadoSel=(v.estado||"").toLowerCase();
+  // 2 colunas: esquerda Tipo+Garagem+Cobertura+Paredes  | direita: Pavimentos+Idade+Estado
+  const cW2=CW/2;
+  const altDesc=66;
+  pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
+  pdf.rect(ML,y,CW,altDesc,"S");
+  pdf.line(ML+cW2,y,ML+cW2,y+altDesc);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(9);
+  pdf.text("Tipo / Garagem / Materiais",ML+cW2/2,y+4,{align:"center"});
+  pdf.text("Dados gerais",ML+cW2+cW2/2,y+4,{align:"center"});
+  pdf.line(ML,y+5.5,ML+CW,y+5.5);
+  pdf.setFont("helvetica","normal");pdf.setFontSize(8);
+  // Coluna esquerda
+  yi=y+9;
+  pdf.setFont("helvetica","bold");pdf.text("Tipo:",ML+2,yi);pdf.setFont("helvetica","normal");
+  const tipos=["Térrea","Sobrado","Galpão","Soleira Negativa"];
+  let xT=ML+13;
+  tipos.forEach(t=>{const m=t.toLowerCase()===tipoSel;const lab=(m?"[X] ":"[ ] ")+t;pdf.text(lab,xT,yi);xT+=pdf.getStringUnitWidth(lab)*8*0.40+2;});
+  yi+=5;
+  pdf.setFont("helvetica","bold");pdf.text("Garagem:",ML+2,yi);pdf.setFont("helvetica","normal");
+  const garagens=["Coberta","Descoberta","Não tem"];
+  xT=ML+19;
+  garagens.forEach(t=>{const m=t.toLowerCase()===garagSel;const lab=(m?"[X] ":"[ ] ")+t;pdf.text(lab,xT,yi);xT+=pdf.getStringUnitWidth(lab)*8*0.40+2;});
+  yi+=5;
+  pdf.setFont("helvetica","bold");pdf.text("Cobertura:",ML+2,yi);yi+=4.5;pdf.setFont("helvetica","normal");
+  const coberOpc=["Telhas de Barro","Telhas de Fibrocimento","Laje de Concreto"];
+  coberOpc.forEach(opt=>{const m=opt.toLowerCase()===coberSel;pdf.text((m?"[X] ":"[ ] ")+opt,ML+4,yi);yi+=4.2;});
+  yi+=1;
+  pdf.setFont("helvetica","bold");pdf.text("Paredes:",ML+2,yi);yi+=4.5;pdf.setFont("helvetica","normal");
+  const parOpc=["Blocos de Cimento","Tijolos de Barro"];
+  parOpc.forEach(opt=>{const m=opt.toLowerCase()===parSel;pdf.text((m?"[X] ":"[ ] ")+opt,ML+4,yi);yi+=4.2;});
+  // Coluna direita
+  yi=y+9;
+  pdf.setFont("helvetica","bold");pdf.text("Nº de pavimentos:",ML+cW2+2,yi);pdf.setFont("helvetica","normal");
+  pdf.text(id.pavimentos||"",ML+cW2+38,yi);yi+=6;
+  pdf.setFont("helvetica","bold");pdf.text("Idade aparente:",ML+cW2+2,yi);pdf.setFont("helvetica","normal");
+  pdf.text((v.idade||"")+(v.idade?" anos":""),ML+cW2+38,yi);yi+=6;
+  pdf.setFont("helvetica","bold");pdf.text("Estado de conservação:",ML+cW2+2,yi);yi+=5;pdf.setFont("helvetica","normal");
+  const ests=["Bom","Regular","Ruim","Péssimo"];
+  ests.forEach(opt=>{const m=opt.toLowerCase()===estadoSel;pdf.text((m?"[X] ":"[ ] ")+opt,ML+cW2+4,yi);yi+=4.5;});
+  y+=altDesc+4;
+
+  // === 2.3 LISTA DE VERIFICAÇÃO — DANOS (preenchida automaticamente) ===
+  pdf.setFont("helvetica","bold");pdf.setFontSize(10);
+  pdf.text("2.3 LISTA DE VERIFICAÇÃO DOS ELEMENTOS CONSTRUTIVOS",ML,y);y+=5;
+  const danos=calcularChecklistDanos(fotosPendentes);
+  const linhasChk=_CHECKLIST_LINHAS;
+  const altChk=8+linhasChk.length*5;
+  pdf.rect(ML,y,CW,altChk,"S");
+  // Cabeçalho
+  const cW3=CW*0.7,cW4=CW*0.15;
+  pdf.line(ML+cW3,y,ML+cW3,y+altChk);
+  pdf.line(ML+cW3+cW4,y,ML+cW3+cW4,y+altChk);
+  pdf.line(ML,y+8,ML+CW,y+8);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(9);
+  pdf.text("Especificação",ML+cW3/2,y+5.5,{align:"center"});
+  pdf.text("Sim",ML+cW3+cW4/2,y+5.5,{align:"center"});
+  pdf.text("Não",ML+cW3+cW4+cW4/2,y+5.5,{align:"center"});
+  pdf.setFont("helvetica","normal");pdf.setFontSize(9);
+  let yL=y+12.5;
+  linhasChk.forEach(l=>{
+    pdf.text(l,ML+2,yL);
+    const temDano=danos[l]===true;
+    pdf.text(temDano?"X":"",ML+cW3+cW4/2,yL,{align:"center"});
+    pdf.text(!temDano?"X":"",ML+cW3+cW4+cW4/2,yL,{align:"center"});
+    yL+=5;
+  });
+}
+
+// === FUNÇÃO PRINCIPAL: gera todas as páginas de TEXTO do laudo completo (1-9 do CNRP).
+// As páginas de FOTOS (anexo II propriamente dito) são geradas pelo loop do simplificado,
+// que é chamado DEPOIS desta função, usando _pdfHeaderFotosCompleto para o cabeçalho enxuto.
+async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,MR,MB,CW){
+  // ===== PÁGINA 1 — CAPA =====
+  // Logo grande centralizado + título + cidade/data
+  if(logoPrep&&logoPrep.dataUrl){
+    try{
+      const maxW=80,maxH=60;
+      const ratio=logoPrep.w/logoPrep.h;
+      let lW=maxW,lH=lW/ratio;
+      if(lH>maxH){lH=maxH;lW=lH*ratio;}
+      pdf.addImage(logoPrep.dataUrl,"PNG",(PW-lW)/2,80,lW,lH,"","FAST");
+    }catch(e){}
+  }
+  pdf.setFont("helvetica","bold");pdf.setFontSize(20);
+  pdf.text("LAUDO DE VISTORIA CAUTELAR",PW/2,170,{align:"center"});
+  pdf.setFont("helvetica","normal");pdf.setFontSize(12);
+  pdf.text((v.endereco&&v.endereco.cidade?v.endereco.cidade:"São Paulo")+"/SP, "+(v.dataCompleta||v.data||"")+".",PW/2,185,{align:"center"});
+
+  // ===== PÁGINA 2 — DADOS, OBJETIVO, LOCALIZAÇÃO =====
+  pdf.addPage();
+  let y=_pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW);
+  const r=v.responsavel||{};
+  const e=v.endereco||{};
+  const enderecoFmt=[e.rua,e.num?"nº "+e.num:"",e.bairro,e.cidade||"São Paulo",e.uf||"SP",e.cep].filter(Boolean).join(" – ");
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);
+  pdf.text("1. DADOS",ML,y);y+=7;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(10);
+  pdf.text("RESPONSÁVEL:",ML+4,y);pdf.setFont("helvetica","normal");pdf.text(r.nome||"",ML+34,y);y+=5;
+  pdf.setFont("helvetica","bold");pdf.text("LOCAL:",ML+4,y);pdf.setFont("helvetica","normal");
+  y=_pdfTextoBloco(pdf,enderecoFmt,ML+34,y,CW-34,10,5);
+  y+=6;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("2. OBJETIVO:",ML,y);y+=6;
+  y=_pdfTextoBloco(pdf,"O presente laudo, tem por objetivo a constatação visual quanto às eventuais anomalias e estado de conservação do imóvel.",ML+4,y,CW-4,10,5);
+  y+=4;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("3. LOCALIZAÇÃO:",ML,y);y+=6;
+  y=_pdfTextoBloco(pdf,"O imóvel em questão vistoriado encontra-se assim localizado, conforme levantamento abaixo:",ML+4,y,CW-4,10,5);
+  y+=8;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(9);
+  pdf.text("Mapa 1:",ML+4,y);pdf.setFont("helvetica","normal");pdf.text(" Mapa de localização do imóvel inspecionado.",ML+18,y);
+  y+=5;
+  // Espaço reservado para mapa
+  pdf.setDrawColor(150,150,150);pdf.setLineWidth(0.3);
+  pdf.rect(ML+4,y,CW-8,80,"S");
+  pdf.setFontSize(9);pdf.setTextColor(150,150,150);
+  pdf.text("(Mapa de localização — anexar manualmente se necessário)",ML+4+(CW-8)/2,y+42,{align:"center"});
+  pdf.setTextColor(0,0,0);
+  _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,2,"X");
+
+  // ===== PÁGINA 3 — METODOLOGIA + ANÁLISE =====
+  pdf.addPage();
+  y=_pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("4. METODOLOGIA:",ML,y);y+=6;
+  y=_pdfTextoBloco(pdf,"Conforme disposto na Norma 12722-1992 da ABNT – Associação Brasileira de Normas Técnicas, Item 4.1.10, para a construção da edificação, registra-se o estado de conservação atual e as eventuais anomalias das construções dos imóveis, resguardando a responsabilidade de eventuais danos que possam ocorrer devido a construção.",ML+4,y,CW-4,9.5,4.5);
+  y+=2;
+  y=_pdfTextoBloco(pdf,"A constatação das anomalias e estado de conservação do imóvel será feita visualmente e registrada através de fotografias.",ML+4,y,CW-4,9.5,4.5);
+  y+=2;
+  y=_pdfTextoBloco(pdf,"Alguns tipos de anomalias, conforme a descrição a seguir:",ML+4,y,CW-4,9.5,4.5,true);
+  y+=2;
+  const tiposAnom=[
+    ["TRINCA","Espessura de 1,5 mm (massa ou alvenaria)."],
+    ["RACHADURA FACE A FACE","Espessura de 1,0 à 1,5 mm (transpassando a alvenaria)."],
+    ["MANCHA DE UMIDADE / INFILTRAÇÃO","Espessura de 1,5 mm (massa ou alvenaria, sem divisão em partes)."],
+    ["FENDA","Espessura de mais de 1,5 mm (massa ou alvenaria, causando divisão em partes)."]
+  ];
+  tiposAnom.forEach(([titulo,desc])=>{
+    pdf.setFont("helvetica","bold");pdf.setFontSize(9);
+    pdf.text(titulo,ML+4,y);y+=4;
+    pdf.setFont("helvetica","normal");
+    y=_pdfTextoBloco(pdf,"→ "+desc,ML+8,y,CW-12,9,4.2);
+    y+=1;
+  });
+  y+=3;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("5. ANÁLISE DAS ANOMALIAS:",ML,y);y+=6;
+  y=_pdfTextoBloco(pdf,"As origens das anomalias podem ter suas causas relacionadas a vários fatores, que podem ser definidos como segue:",ML+4,y,CW-4,9.5,4.5);
+  y+=2;
+  const itemsAnal=[
+    "► FISSURAS, TRINCAS E RACHADURAS » Prováveis fatores: variações de temperaturas.",
+    "► VARIAÇÕES DIFERENCIADAS DO TEOR DE UMIDADE DOS MATERIAIS POROSOS » Prováveis fatores: movimentações higroscópicas, atuação de sobrecargas, deformidade excessiva das estruturas de concreto armado, recalques diferenciais das fundações, alterações químicas dos materiais de construção.",
+    "► ALTERAÇÕES QUÍMICAS DOS MATERIAIS DE CONSTRUÇÃO » Prováveis fatores: deficiência na execução do encunhamento das paredes de vedação com os componentes estruturais, falta ou deficiência de vergas e contra-vergas nas portas e janelas.",
+    "► EMPOLAMENTO DO REVESTIMENTO » Prováveis fatores: deslocamento de argamassa por carbonatação.",
+    "► PINTURA DECOMPOSTA » Prováveis fatores: decomposição da pintura em paredes e forros de uma edificação se deve pela atuação da umidade excessiva na pintura.",
+    "► MANCHA DE UMIDADE » Prováveis fatores: falta e/ou falha de impermeabilização de áreas a céu aberto ou falta e/ou falha de rejuntamento ou calefação do revestimento externo, deficiência de vedação de caixilhos das janelas e por defeitos nas instalações hidro-sanitárias."
+  ];
+  itemsAnal.forEach(it=>{
+    y=_pdfGarantirEspaco(pdf,y,12,PH,MB,MT);
+    y=_pdfTextoBloco(pdf,it,ML+4,y,CW-4,9,4.2);
+    y+=1.5;
+  });
+  _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,3,"X");
+
+  // ===== PÁGINA 4 — ANÁLISE (continuação) + LISTA + AVALIAÇÃO + CONCLUSÃO =====
+  pdf.addPage();
+  y=_pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW);
+  const itemsAnal2=[
+    "► DESPRENDIMENTO DE PISOS CERÂMICOS » Prováveis fatores: assentamento deficiente destas peças; quanto ao tipo de argamassa utilizada para assentamento; pela falta de espaçamento suficiente entre as peças para uma regular movimentação destas (contração e dilatação) quando da incidência de variações de temperatura bruscas; e, quando da deformação excessiva dos componentes estruturais.",
+    "► DESAGREGAÇÃO DA ARGAMASSA DO REVESTIMENTO » Prováveis fatores: oxidação da ferragem das lajes, vigas e pilares em razão da deficiência do cobrimento, da porosidade do concreto, pelas infiltrações excessivas de água, que propiciam o ataque de cloretos ou gás carbônico na ferrugem.",
+    "► DESTACAMENTO DAS PLACAS DE GESSO » Prováveis fatores: este destacamento, via de regra, é proveniente da incidência de umidade, da execução do atirantamento inadequado e pela ausência da aplicação de massa corrida e fundo preparador sobre o mesmo."
+  ];
+  itemsAnal2.forEach(it=>{y=_pdfTextoBloco(pdf,it,ML+4,y,CW-4,9,4.2);y+=1.5;});
+  y+=2;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);
+  pdf.text("6. LISTA DE VERIFICAÇÃO DOS ELEMENTOS CONSTRUTIVOS",ML,y);y+=6;
+  y=_pdfTextoBloco(pdf,"Para auxiliar a anotação das não conformidades foi utilizada uma lista de verificação (check-list), com base nas orientações da Norma Nacional de Inspeção Predial, levando em consideração a tipologia, padrão e as manifestações patológicas esperadas.",ML+4,y,CW-4,9.5,4.5);
+  y+=3;
+  // AVALIAÇÃO
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("7. AVALIAÇÃO DO IMÓVEL",ML,y);y+=6;
+  y=_pdfTextoBloco(pdf,"A manutenção é avaliada como: CONFORME, NÃO CONFORME ou NÃO SE APLICA.",ML+4,y,CW-4,9.5,4.5);
+  y+=1;
+  y=_pdfTextoBloco(pdf,"Para sua classificação, leva-se em conta que a maioria das irregularidades encontradas são falhas, com grau de manutenção crítica, média ou mínima, ou seja, referem-se à necessidade de manutenção. A ausência de manutenção é uma das razões para a situação crítica, pois através de atividades preventivas de manutenção os riscos oferecidos são minimizados.",ML+4,y,CW-4,9.5,4.5);
+  y+=2;
+  // Regra: Estado=Bom → CONFORME, demais → NÃO CONFORME
+  const estado=(v.estado||"").toLowerCase();
+  const classif=estado==="bom"?"CONFORME":"NÃO CONFORME";
+  pdf.setFont("helvetica","bold");pdf.setFontSize(10);
+  pdf.text("Portanto classificamos imóvel como: "+classif,ML+4,y);y+=8;
+  // CONCLUSÃO (gerada automaticamente)
+  y=_pdfGarantirEspaco(pdf,y,20,PH,MB,MT);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("8. CONCLUSÃO:",ML,y);y+=6;
+  const conclusao=gerarConclusaoAutomatica();
+  y=_pdfTextoBloco(pdf,conclusao,ML+4,y,CW-4,10,5);
+  _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,4,"X");
+
+  // ===== PÁGINA 5 — ENCERRAMENTO + ASSINATURAS =====
+  pdf.addPage();
+  y=_pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("9. ENCERRAMENTO:",ML,y);y+=6;
+  y=_pdfTextoBloco(pdf,"O presente Laudo de Vistoria Cautelar possui numeração impressa em suas folhas e somente no anverso e esta última datada e assinada.",ML+4,y,CW-4,10,5);
+  y+=3;
+  const nomeEmpresaEnc=(prest&&prest.nome)||"CTB ENGENHARIA CAUTELAR";
+  y=_pdfTextoBloco(pdf,"Finalmente, declaramos que a "+nomeEmpresaEnc+" não tem nenhum vínculo com os proprietários dos bens inspecionados, não tendo, portanto, interesse pessoal ou financeiro nas recomendações ou valores resultantes deste laudo.",ML+4,y,CW-4,10,5);
+  y+=3;
+  y=_pdfTextoBloco(pdf,"Fazem parte deste laudo os seguintes anexos:",ML+4,y,CW-4,10,5);
+  y+=2;
+  y=_pdfTextoBloco(pdf,"ANEXO I – Identificação do imóvel",ML+8,y,CW-8,10,5);
+  y=_pdfTextoBloco(pdf,"ANEXO II – Relatório fotográfico do imóvel vistoriado",ML+8,y,CW-8,10,5);
+  y+=5;
+  pdf.setFont("helvetica","normal");pdf.setFontSize(10);
+  pdf.text((v.endereco&&v.endereco.cidade?v.endereco.cidade:"São Paulo")+", "+(v.dataCompleta||v.data||"")+".",ML+4,y);
+  y+=18;
+  // ASSINATURAS — esquerda: morador (assinatura na hora), direita: técnico (linha em branco para certificado digital)
+  const colSig=CW/2-6;
+  const xLeft=ML+3,xRight=ML+CW/2+3;
+  const sigY=y;
+  // Morador
+  if(v.assinaturaResp||window._sigRespDataUrl){
+    try{
+      const src=v.assinaturaResp||window._sigRespDataUrl;
+      pdf.addImage(src,"PNG",xLeft+(colSig-40)/2,sigY-14,40,14,"","FAST");
+    }catch(e){}
+  }
+  pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
+  pdf.line(xLeft,sigY,xLeft+colSig,sigY);
+  pdf.line(xRight,sigY,xRight+colSig,sigY);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(9);
+  pdf.text(r.nome||"",xLeft+colSig/2,sigY+5,{align:"center"});
+  pdf.text("RONALDO PINTO",xRight+colSig/2,sigY+5,{align:"center"});
+  pdf.setFont("helvetica","normal");pdf.setFontSize(8);
+  pdf.text("Responsável pelo Imóvel",xLeft+colSig/2,sigY+9,{align:"center"});
+  pdf.text("CAU Nº A56568-7",xRight+colSig/2,sigY+9,{align:"center"});
+  pdf.text("Responsável Técnico",xRight+colSig/2,sigY+13,{align:"center"});
+  _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,5,"X");
+
+  // ===== PÁGINA 6 — Capa do Anexo I =====
+  pdf.addPage();
+  pdf.setFont("helvetica","bold");pdf.setFontSize(20);
+  pdf.text("- ANEXO I -",PW/2,130,{align:"center"});
+  pdf.setFontSize(16);
+  pdf.text("IDENTIFICAÇÃO DO IMÓVEL",PW/2,145,{align:"center"});
+  _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,6,"X");
+
+  // ===== PÁGINA 7 — Conteúdo do Anexo I (tabela) =====
+  pdf.addPage();
+  _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v);
+  _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,7,"X");
+
+  // ===== PÁGINA 8 — Capa do Anexo II =====
+  pdf.addPage();
+  pdf.setFont("helvetica","bold");pdf.setFontSize(20);
+  pdf.text("- ANEXO II -",PW/2,130,{align:"center"});
+  pdf.setFontSize(16);
+  pdf.text("RELATÓRIO FOTOGRÁFICO DO IMÓVEL",PW/2,145,{align:"center"});
+  _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,8,"X");
+
+  // A próxima página em diante (fotos) é gerada pelo loop principal da finalizarVistoria
+  // usando _pdfHeaderFotosCompleto. O número total de páginas é corrigido depois.
+}
+
+// Após gerar todas as páginas, atualiza o "X" do "pág. N de X" no rodapé das páginas de texto.
+// Como jsPDF não permite editar texto já desenhado, usamos uma estratégia simpler: a numeração
+// final fica como "pág. N" sem total. Mais limpo e suficiente. (No futuro dá pra usar o plugin
+// de paginação ou regenerar tudo após contar.)
 
 
 </script>
