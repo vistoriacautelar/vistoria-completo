@@ -139,7 +139,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
       <button class="btn primary" onclick="doLogin()">Entrar</button>
     </div>
   </div>
-  <div style="padding:16px;text-align:center;font-size:12px;color:#aaa">Vistoria Cautelar — Laudo Completo v1.0</div>
+  <div style="padding:16px;text-align:center;font-size:12px;color:#aaa">Vistoria Cautelar v1.6</div>
 </div>
 
 <div id="s-dash" class="screen">
@@ -189,6 +189,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
 <div id="s-pendentes" class="screen">
   <div class="topbar"><button class="back" onclick="goTo('s-dash')">&#8249; Voltar</button><h1>Ausentes Pendentes</h1></div>
   <div class="content">
+    <div id="pendentes-filtro-master" style="display:none;margin-bottom:12px">
+      <div style="display:flex;gap:8px;background:#f3f4f6;border-radius:10px;padding:4px">
+        <button id="pend-modo-todos" class="btn small" style="flex:1;background:#1d4ed8;color:#fff;border-color:#1d4ed8" onclick="pendSetarModo('todos')">Todos</button>
+        <button id="pend-modo-meus" class="btn small" style="flex:1" onclick="pendSetarModo('meus')">Apenas meus</button>
+      </div>
+    </div>
     <div id="lista-pendentes"></div>
   </div>
 </div>
@@ -355,21 +361,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
   </div>
 </div>
 
-<!-- ===== TELA: IDENTIFICACAO DO IMOVEL (apos Nova Vistoria, antes de tirar fotos) ===== -->
+<!-- ===== TELA: IDENTIFICACAO DO IMOVEL (entre Nova Vistoria e Vistoria/Fotos, modo Completo) ===== -->
 <div id="s-identificacao" class="screen">
-  <div class="topbar"><button class="back" onclick="goTo('s-nova-vistoria')">&#8249; Voltar</button><h1>Identificacao do Imovel</h1></div>
+  <div class="topbar"><button class="back" onclick="goTo('s-nova-vistoria')">&#8249; Voltar</button><h1>Identificação do Imóvel</h1></div>
   <div class="content">
-    <div class="card"><h2>Informacoes Gerais</h2>
-      <p style="font-size:12px;color:#888;margin-bottom:10px">Servicos publicos disponiveis no local. Desmarque apenas o que NAO houver.</p>
+    <div class="card"><h2>Informações Gerais</h2>
+      <p style="font-size:12px;color:#888;margin-bottom:10px">Serviços públicos disponíveis no local. Desmarque apenas o que NÃO houver.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-energia" checked style="width:18px;height:18px">Energia Eletrica</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-iluminacao" checked style="width:18px;height:18px">Iluminacao Publica</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-pavimentacao" checked style="width:18px;height:18px">Pavimentacao</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-energia" checked style="width:18px;height:18px">Energia Elétrica</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-iluminacao" checked style="width:18px;height:18px">Iluminação Pública</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-pavimentacao" checked style="width:18px;height:18px">Pavimentação</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-guias" checked style="width:18px;height:18px">Guias e Sarjetas</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-agua" checked style="width:18px;height:18px">Rede de Agua</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-agua" checked style="width:18px;height:18px">Rede de Água</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-esgoto" checked style="width:18px;height:18px">Rede de Esgoto</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-gas" checked style="width:18px;height:18px">Gas Encanado</label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-telefone" checked style="width:18px;height:18px">Rede Telefonica</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-gas" checked style="width:18px;height:18px">Gás Encanado</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-telefone" checked style="width:18px;height:18px">Rede Telefônica</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" id="id-sv-drenagem" checked style="width:18px;height:18px">Drenagem Pluvial</label>
       </div>
     </div>
@@ -383,16 +389,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
         </select>
       </div>
     </div>
-    <div class="card"><h2>Construcao</h2>
+    <div class="card"><h2>Construção</h2>
       <div class="field"><label>Garagem</label>
         <select id="id-garagem">
           <option value="">Selecione...</option>
           <option value="Coberta">Coberta</option>
           <option value="Descoberta">Descoberta</option>
-          <option value="Nao tem">Nao tem</option>
+          <option value="Não tem">Não tem</option>
         </select>
       </div>
-      <div class="field"><label>Numero de pavimentos</label>
+      <div class="field"><label>Número de pavimentos</label>
         <input type="number" id="id-pavimentos" placeholder="Ex: 1, 2, 3..." min="1" max="50" inputmode="numeric">
       </div>
     </div>
@@ -415,8 +421,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
         </select>
       </div>
     </div>
-    <button class="btn primary" onclick="confirmarIdentificacao()">Avancar para Vistoria</button>
-    <p style="font-size:11px;color:#888;text-align:center;margin-top:10px">Todos os campos sao opcionais. Voce pode preencher depois na Finalizacao.</p>
+    <button class="btn primary" onclick="confirmarIdentificacao()">Avançar para Vistoria</button>
+    <p style="font-size:11px;color:#888;text-align:center;margin-top:10px">Todos os campos são opcionais. Você pode preencher depois.</p>
   </div>
 </div>
 
@@ -467,13 +473,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
       <div class="field"><label>Estado de Conservacao</label><select id="fin-estado"><option>Bom</option><option selected>Regular</option><option>Ruim</option><option>Péssimo</option></select></div>
       <div class="field"><label>Idade Aparente do Imóvel (anos) *</label><input type="number" id="fin-idade" placeholder="Ex: 30" min="0" max="200" inputmode="numeric" required></div>
     </div>
-    <div class="card"><h2>Assinatura do responsavel pelo imovel</h2>
+    <div class="card" id="card-assinatura-resp"><h2>Assinatura do responsavel pelo imovel</h2>
       <div id="assin-info" style="font-size:13px;color:#555;line-height:1.8;margin-bottom:14px;padding:12px;background:#f9f9f9;border-radius:8px"></div>
       <p style="font-size:13px;color:#888;margin-bottom:8px;font-weight:500">Assine abaixo:</p>
       <canvas id="sig-canvas" class="sig-pad"></canvas>
       <div class="grid2" style="margin-top:10px"><button class="btn" onclick="limparAssinatura()">Limpar</button><button class="btn primary" onclick="salvarAssinatura()">Confirmar</button></div>
     </div>
-    <div class="card"><h2>Assinatura do tecnico</h2><div id="sig-tecnico-preview" style="padding:10px;background:#f9f9f9;border-radius:8px;text-align:center"></div></div>
+    <div class="card" id="card-assinatura-tec"><h2>Assinatura do tecnico</h2><div id="sig-tecnico-preview" style="padding:10px;background:#f9f9f9;border-radius:8px;text-align:center"></div></div>
     <div id="sig-confirmado" style="display:none;background:#d1fae5;color:#065f46;padding:12px 16px;border-radius:10px;font-size:14px;font-weight:500;text-align:center">Assinatura confirmada</div>
     <button class="btn success" onclick="finalizarVistoria()" id="btn-finalizar" disabled style="opacity:.4">Gerar PDF + ZIP e finalizar</button>
     </div>
@@ -656,6 +662,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
     </div>
   </div>
 </div>
+
+<div id="modal-retomar-rascunho" class="modal-bg" style="display:none">
+  <div class="modal" style="text-align:center">
+    <h3 style="color:#1d4ed8">Vistoria em andamento</h3>
+    <p id="rascunho-info" style="font-size:14px;color:#555;margin:12px 0 20px"></p>
+    <p style="font-size:12px;color:#888;margin-bottom:20px">Encontramos uma vistoria que não foi finalizada (provavelmente o app foi recarregado). Você pode retomá-la de onde parou ou descartá-la.</p>
+    <div class="grid2">
+      <button class="btn" onclick="descartarRascunho()">Descartar</button>
+      <button class="btn primary" onclick="retomarRascunho()">Retomar</button>
+    </div>
+  </div>
+</div>
 <div id="modal-editar-resp" class="modal-bg" style="display:none" onclick="closeModalBg(event,'modal-editar-resp')">
   <div class="modal"><h3>Editar Dados</h3>
     <div class="field"><label>Nome</label><input type="text" id="er-nome"></div>
@@ -755,13 +773,24 @@ const LOGO_CONST="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgc
 
 import{initializeApp,deleteApp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import{getAuth,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,onAuthStateChanged,updatePassword,sendPasswordResetEmail}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import{getFirestore,collection,doc,setDoc,getDoc,getDocs,addDoc,query,where,orderBy,serverTimestamp,deleteDoc,updateDoc,runTransaction}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import{getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,setDoc,getDoc,getDocs,addDoc,query,where,orderBy,serverTimestamp,deleteDoc,updateDoc,runTransaction}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import{getStorage,ref as storageRef,uploadBytes,getDownloadURL,deleteObject}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 const FC={apiKey:"AIzaSyBTMAjVM7551eCoNK9Dcu98RrAzT2gghVE",authDomain:"vistoria-cautelar-completo.firebaseapp.com",projectId:"vistoria-cautelar-completo",storageBucket:"vistoria-cautelar-completo.firebasestorage.app",messagingSenderId:"488480360690",appId:"1:488480360690:web:b81dd653b105fa430c686b"};
 const fbApp=initializeApp(FC);
 const auth=getAuth(fbApp);
-const db=getFirestore(fbApp);
+// Firestore com PERSISTÊNCIA OFFLINE: leituras/escritas são cacheadas localmente
+// (IndexedDB) e sincronizam sozinhas quando a conexão volta. persistentMultipleTabManager
+// evita conflito se o app estiver aberto em mais de uma aba. Se a inicialização com cache
+// falhar (navegador sem suporte, modo privado etc.), cai pro getFirestore padrão — o app
+// continua funcionando, só sem o cache offline do banco.
+let db;
+try{
+  db=initializeFirestore(fbApp,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
+}catch(e){
+  console.warn("[Firestore] persistência offline indisponível, usando modo padrão:",e);
+  db=getFirestore(fbApp);
+}
 const fbStorage=getStorage(fbApp);
 
 // AMBIENTES é uma lista dinâmica: começa com a base fixa, e recebe cômodos custom carregados
@@ -957,6 +986,94 @@ function localDB(){
     req.onerror=()=>rej(req.error);
   });
 }
+
+// ===== RASCUNHO DA VISTORIA EM ANDAMENTO (proteção contra reload/perda de fotos) =====
+// Reutiliza o MESMO objectStore (keyPath "vistoriaId") com uma chave fixa reservada.
+// A cada foto adicionada/removida, gravamos o estado completo aqui. Se a aba recarregar
+// (pressão de memória no iOS/Android, troca de rede, app indo pro background), o trabalho
+// é recuperado deste rascunho ao reabrir — em vez de evaporar com o objeto em memória.
+const DRAFT_KEY="__rascunho_ativo__";
+let _draftSalvando=false; // evita gravações concorrentes sobrepostas
+
+async function localSalvarRascunho(vistoria,fotos){
+  if(_draftSalvando)return false; // já tem uma gravação em curso; a próxima chamada cobre
+  _draftSalvando=true;
+  try{
+    const db=await localDB();
+    // Serializa só o necessário das fotos (dataUrl + metadados), igual ao que o
+    // finalizarVistoria já persiste, pra reconstrução fiel.
+    const fotosArr=Object.values(fotos||{}).map(f=>({
+      id:f.id,dataUrl:f.dataUrl,ambiente:f.ambiente,tipo:f.tipo,
+      legenda:f.legenda,numero:f.numero,patologias:f.patologias||[],
+      combinacoes:f.combinacoes||[],timestamp:f.timestamp
+    }));
+    return await new Promise((res,rej)=>{
+      const tx=db.transaction(LOCAL_DB_STORE,"readwrite");
+      tx.objectStore(LOCAL_DB_STORE).put({
+        vistoriaId:DRAFT_KEY,
+        vistoria,           // metadados da vistoria (cliente, endereço, checklist etc.)
+        fotos:fotosArr,
+        savedAt:Date.now()
+      });
+      tx.oncomplete=()=>res(true);
+      tx.onerror=()=>rej(tx.error);
+    });
+  }catch(e){console.error("localSalvarRascunho:",e);return false;}
+  finally{_draftSalvando=false;}
+}
+
+async function localBuscarRascunho(){
+  try{
+    const db=await localDB();
+    return await new Promise((res,rej)=>{
+      const tx=db.transaction(LOCAL_DB_STORE,"readonly");
+      const req=tx.objectStore(LOCAL_DB_STORE).get(DRAFT_KEY);
+      req.onsuccess=()=>res(req.result||null);
+      req.onerror=()=>rej(req.error);
+    });
+  }catch(e){console.error("localBuscarRascunho:",e);return null;}
+}
+
+async function localApagarRascunho(){
+  try{
+    const db=await localDB();
+    return await new Promise((res,rej)=>{
+      const tx=db.transaction(LOCAL_DB_STORE,"readwrite");
+      tx.objectStore(LOCAL_DB_STORE).delete(DRAFT_KEY);
+      tx.oncomplete=()=>res(true);
+      tx.onerror=()=>rej(tx.error);
+    });
+  }catch(e){console.error("localApagarRascunho:",e);return false;}
+}
+
+// Salva rascunho com pequeno debounce: chamadas em rajada (várias fotos rápidas)
+// viram uma só gravação, sem travar a UI.
+let _draftTimer=null;
+function agendarSalvarRascunho(){
+  if(typeof currentVistoria==="undefined"||!currentVistoria)return;
+  if(currentVistoria.status&&currentVistoria.status!=="em_andamento")return;
+  clearTimeout(_draftTimer);
+  _draftTimer=setTimeout(()=>{
+    try{localSalvarRascunho(currentVistoria,fotosPendentes);}catch(e){console.warn("agendarSalvarRascunho:",e);}
+  },400);
+}
+
+// REDE DE SEGURANÇA: quando o app vai pro background (trocar de app, abrir a câmera,
+// tela bloqueia), o iOS/Android pode descartar a aba a qualquer momento. Aqui forçamos
+// uma gravação IMEDIATA do rascunho (sem esperar o debounce), garantindo que a última
+// foto não se perca se a aba for morta antes do timer de 400ms disparar.
+function salvarRascunhoImediato(){
+  try{
+    if(typeof currentVistoria==="undefined"||!currentVistoria)return;
+    if(currentVistoria.status&&currentVistoria.status!=="em_andamento")return;
+    if(!fotosPendentes||!Object.keys(fotosPendentes).length)return;
+    clearTimeout(_draftTimer);
+    localSalvarRascunho(currentVistoria,fotosPendentes);
+  }catch(e){console.warn("salvarRascunhoImediato:",e);}
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")salvarRascunhoImediato();});
+window.addEventListener("pagehide",salvarRascunhoImediato);
+
 async function localSalvarFotos(vistoriaId,fotos){
   try{
     const db=await localDB();
@@ -997,7 +1114,7 @@ async function localListarIds(){
     return new Promise((res,rej)=>{
       const tx=db.transaction(LOCAL_DB_STORE,"readonly");
       const req=tx.objectStore(LOCAL_DB_STORE).getAllKeys();
-      req.onsuccess=()=>res(req.result||[]);
+      req.onsuccess=()=>res((req.result||[]).filter(k=>k!==DRAFT_KEY));
       req.onerror=()=>rej(req.error);
     });
   }catch(e){console.error("localListarIds:",e);return[];}
@@ -1118,35 +1235,32 @@ onAuthStateChanged(auth,async user=>{
       return;
     }
     currentUser=user;
-    // Paraleliza as 3 chamadas Firestore: user data + prestador default + ambientes custom.
-    // Antes era sequencial (3 requests em série = lento). Agora dispara as 3 em paralelo.
-    const[snapUser]=await Promise.all([
-      getDoc(doc(db,"users",user.uid)),
-      loadPrestadorDefault(),
-      loadAmbientesCustom()
-    ]);
+    // OTIMIZAÇÃO DE LOGIN: bloqueia APENAS no que é crítico pra exibir o dashboard.
+    // O getDoc do user é obrigatório (define o papel — master vs cadastrador, e isso muda a UI).
+    // Já loadPrestadorDefault() e loadAmbientesCustom() são usados só DEPOIS, quando o cadastrador
+    // entra em "Nova Vistoria". Disparamos em background — chegam enquanto o usuário olha o dash.
+    const snapUser=await getDoc(doc(db,"users",user.uid));
+    // Background: carrega prestador padrão e ambientes custom sem bloquear o login
+    loadPrestadorDefault().catch(e=>console.warn("loadPrestadorDefault bg:",e));
+    loadAmbientesCustom().catch(e=>console.warn("loadAmbientesCustom bg:",e));
     if(snapUser.exists()){
       currentUserData=snapUser.data();currentRole=currentUserData.role;assinaturaTecnico=currentUserData.assinatura||null;
     } else {
-      // Doc do usuário não existe. Decidir se é o FUNDADOR (primeiro do sistema → master)
-      // ou uma conta sem perfil (→ cadastrador).
-      // Em vez de listar a coleção users (que as regras bloqueiam pra não-master), usamos
-      // um doc de controle único em /config/bootstrap:
-      //   - se ele NÃO existe → este é o fundador: cria o doc de bootstrap + vira master
-      //   - se já existe → alguém já é master: este usuário entra como cadastrador
+      // Doc do usuário não existe. Dois cenários:
+      //  (a) FUNDADOR: é o primeiríssimo acesso do sistema (coleção users vazia) → vira master.
+      //  (b) CONTA ÓRFÃ: a conta existe no Auth mas perdeu o doc no Firestore (bug antigo de
+      //      cadastro, onde o Auth era criado mas o setDoc falhava). NÃO deve virar master —
+      //      recria o doc como "cadastrador" pra destravar o uso (gerar PDF etc.).
       let ehFundador=false;
       try{
-        const snapBoot=await getDoc(doc(db,"config","bootstrap"));
-        ehFundador=!snapBoot.exists();
+        const todosUsers=await getDocs(collection(db,"users"));
+        ehFundador=todosUsers.empty;
       }catch(_){ehFundador=false;}
       if(ehFundador){
         currentRole="master";
         currentUserData={nome:"Admin",email:user.email,role:"master"};
-        try{
-          // Marca o sistema como inicializado (trava o bootstrap pra sempre) e cria o master.
-          await setDoc(doc(db,"config","bootstrap"),{inicializadoEm:serverTimestamp(),masterUid:user.uid});
-          await setDoc(doc(db,"users",user.uid),{...currentUserData,criadoEm:serverTimestamp()});
-        }catch(e){console.error("Falha ao criar doc do fundador:",e);}
+        try{await setDoc(doc(db,"users",user.uid),{...currentUserData,criadoEm:serverTimestamp()});}
+        catch(e){console.error("Falha ao criar doc do fundador:",e);}
       }else{
         // Self-bootstrap como cadastrador (permitido pelas regras). Recupera a conta órfã.
         currentRole="cadastrador";
@@ -1173,6 +1287,7 @@ onAuthStateChanged(auth,async user=>{
       if(saved)ultimoResponsavel=JSON.parse(saved);
     }catch(e){}
     goTo("s-dash");
+    verificarRascunho(); // oferece retomar vistoria não finalizada (recuperação pós-reload)
   }else{goTo("s-login");}
 });
 
@@ -1590,14 +1705,25 @@ window.exportarPlanilhaCliente=async()=>{
   const header=[
     "Ordem","Frente de Serviço / Coletor","Endereço","Número","Complemento",
     "Vistoria Interna","Vistoria Externa","Tipo do Imóvel",
-    "Data 1ª visita","Data 2ª visita","Data da entrega",
+    "Data 1ª visita","Data 2ª visita","Data da vistoria",
     "Nome do acompanhante da vistoria","Status","Contato","Documento"
   ];
   const rows=[header];
   docs.forEach((v,i)=>{
     const{interna,externa}=classificarInternaExterna(v);
+    // === Datas conforme regra acordada com o cliente ===
+    // 1ª Visita: sempre preenchida (data de criação da vistoria — primeira ida ao endereço).
+    // 2ª Visita: SÓ preenchida em vistorias que tiveram retorno (visitas > 1).
+    //   Em vistoria finalizada já na 1ª ida (qualquer status: concluída, recusa, parcial,
+    //   externa, ausente final sem retorno), 2ª visita fica VAZIA.
+    // Data da vistoria: preenchida quando a vistoria foi finalizada (qualquer status).
+    //   Ausente ainda PENDENTE de retorno fica VAZIA.
+    //   Vistorias antigas (sem data_finalizacao) também ficam VAZIAS — equipe sabe disso.
     const data1=v.criadoEm&&v.criadoEm.seconds?new Date(v.criadoEm.seconds*1000):null;
-    const data2=v.visitas&&v.visitas>1&&v.atualizadoEm&&v.atualizadoEm.seconds?new Date(v.atualizadoEm.seconds*1000):null;
+    const data2=(v.visitas&&v.visitas>1&&v.atualizadoEm&&v.atualizadoEm.seconds)
+      ?new Date(v.atualizadoEm.seconds*1000):null;
+    const dataVist=(v.data_finalizacao&&v.data_finalizacao.seconds)
+      ?new Date(v.data_finalizacao.seconds*1000):null;
     rows.push([
       i+1,
       v.coletorNome||"",
@@ -1609,7 +1735,7 @@ window.exportarPlanilhaCliente=async()=>{
       v.ocupacao||v.tipo||"",
       data1?fmtDataExcel(data1):"",
       data2?fmtDataExcel(data2):"",
-      "", // Data da entrega — preenchimento manual depois
+      dataVist?fmtDataExcel(dataVist):"",
       (v.responsavel&&v.responsavel.nome)||"",
       statusLabels[v.status]||v.status||"",
       (v.responsavel&&v.responsavel.tel)||"",
@@ -1812,9 +1938,9 @@ window.salvarPrestador=async()=>{const nome=document.getElementById("mp-nome").v
 window.setDefaultPrestador=async id=>{const q=query(collection(db,"prestadores"),where("isDefault","==",true));const s=await getDocs(q);for(const d of s.docs)await updateDoc(doc(db,"prestadores",d.id),{isDefault:false});await updateDoc(doc(db,"prestadores",id),{isDefault:true});await loadPrestadorDefault();loadPrestadores();};
 window.deletarPrestador=async id=>{if(!confirm("Excluir?"))return;await deleteDoc(doc(db,"prestadores",id));loadPrestadores();};
 
-async function loadClientes(){const snap=await getDocs(collection(db,"clientes"));const el=document.getElementById("lista-clientes");el.innerHTML="";const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));_cacheClientes=docs.slice();if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum cliente</p>';return;}docs.forEach(cl=>{const av='<div class="avatar" style="background:#ede9fe;color:#5b21b6">'+cl.nome.charAt(0)+"</div>";const act=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarCliente(\''+cl.id+'\')">Excluir</button>':'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';el.appendChild(mkLI(av,cl.nome,"RRT: "+cl.rrt,act));});}
-window.salvarCliente=async()=>{const n=document.getElementById("mc-nome").value.trim();const r=document.getElementById("mc-rrt").value.trim();if(!n||!r)return alert("Preencha nome e RRT");await addDoc(collection(db,"clientes"),{nome:n,rrt:r,resp:document.getElementById("mc-resp").value.trim(),criadoEm:serverTimestamp()});closeModal("modal-cliente");["mc-nome","mc-rrt","mc-resp"].forEach(id=>document.getElementById(id).value="");_cacheClientes=null;loadClientes();};
-window.deletarCliente=async id=>{if(!confirm("Excluir?"))return;await deleteDoc(doc(db,"clientes",id));_cacheClientes=null;loadClientes();};
+async function loadClientes(){const snap=await getDocs(collection(db,"clientes"));const el=document.getElementById("lista-clientes");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum cliente</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));docs.forEach(cl=>{const av='<div class="avatar" style="background:#ede9fe;color:#5b21b6">'+cl.nome.charAt(0)+"</div>";const act=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarCliente(\''+cl.id+'\')">Excluir</button>':'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';el.appendChild(mkLI(av,cl.nome,"RRT: "+cl.rrt,act));});}
+window.salvarCliente=async()=>{const n=document.getElementById("mc-nome").value.trim();const r=document.getElementById("mc-rrt").value.trim();if(!n||!r)return alert("Preencha nome e RRT");await addDoc(collection(db,"clientes"),{nome:n,rrt:r,resp:document.getElementById("mc-resp").value.trim(),criadoEm:serverTimestamp()});closeModal("modal-cliente");["mc-nome","mc-rrt","mc-resp"].forEach(id=>document.getElementById(id).value="");loadClientes();};
+window.deletarCliente=async id=>{if(!confirm("Excluir?"))return;await deleteDoc(doc(db,"clientes",id));loadClientes();};
 
 async function loadColetores(){const[snap,clSnap]=await Promise.all([getDocs(collection(db,"coletores")),getDocs(collection(db,"clientes"))]);const clMap={};clSnap.forEach(d=>clMap[d.id]=d.data().nome);const el=document.getElementById("lista-coletores");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum coletor</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>{const ca=clMap[a.clienteId]||"";const cb=clMap[b.clienteId]||"";return ca.localeCompare(cb,"pt-BR")||a.nome.localeCompare(b.nome,"pt-BR");});const grupos={};docs.forEach(col=>{const cn=clMap[col.clienteId]||"Sem cliente";if(!grupos[cn])grupos[cn]=[];grupos[cn].push(col);});Object.entries(grupos).forEach(([cname,cols])=>{const g=document.createElement("div");g.className="coletor-group";const t=document.createElement("div");t.className="coletor-group-title";t.textContent=cname;g.appendChild(t);cols.forEach(col=>{const av='<div class="avatar" style="background:#e0f2fe;color:#0369a1;font-size:11px">C</div>';const act=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarColetor(\''+col.id+'\')">Excluir</button>':'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';g.appendChild(mkLI(av,col.nome,"",act));});el.appendChild(g);});}
 window.salvarColetor=async()=>{const cId=document.getElementById("mcol-cliente").value;const n=document.getElementById("mcol-nome").value.trim();if(!cId||!n)return alert("Selecione cliente e informe nome");await addDoc(collection(db,"coletores"),{nome:n,clienteId:cId,criadoEm:serverTimestamp()});closeModal("modal-coletor");document.getElementById("mcol-nome").value="";loadColetores();};
@@ -2128,14 +2254,15 @@ function salvarFotoFinalEditor(dataUrl,patologias,combinacoes){
   const temPat=combinacoes&&combinacoes.length;
   const tipo=temPat?"Detalhe":"Vista";
   let legendaCalc;
-  // Tanto completo quanto simplificado: a legenda mostra a patologia descrita por extenso
-  // embaixo da foto. No completo o formato é "Categoria A-L: subitens" (ex.: "Alvenaria:
-  // Trincas / Fissuras"); sem código sobre a imagem, só a seta.
-  legendaCalc=temPat?unificarLegendasCombos(combinacoes):"Vista";
+  if(tipoLaudo==="completo"){
+    legendaCalc=tipo; // sempre Vista/Detalhe; código vai sobre a imagem
+  } else {
+    legendaCalc=temPat?unificarLegendasCombos(combinacoes):"Vista";
+  }
   if(_efCameraMode==="adicionar"){
     _efFotos.push({dataUrl,ambiente:_efAmbienteAlvo,tipo,legenda:legendaCalc,combinacoes:combinacoes||[]});
   } else if(_efCameraMode==="substituir"&&_efSubstIdx!==null){
-    const legendaSubst=temPat?legendaCalc:(_efFotos[_efSubstIdx]&&_efFotos[_efSubstIdx].legenda||"Vista");
+    const legendaSubst=tipoLaudo==="completo"?legendaCalc:(temPat?legendaCalc:(_efFotos[_efSubstIdx]&&_efFotos[_efSubstIdx].legenda||"Vista"));
     _efFotos[_efSubstIdx]={..._efFotos[_efSubstIdx],dataUrl,legenda:legendaSubst,combinacoes:combinacoes||[]};
   }
   _efCameraMode=null;_efAmbienteAlvo=null;_efSubstIdx=null;
@@ -2266,39 +2393,232 @@ window.salvarFotoFinalDispatch=function(dataUrl,pats,combos){
 
 // ── PENDENTE / RETORNO ────────────────────────────────────────
 window.togglePendente=v=>{
-  document.getElementById("field-pendente").style.display=v==="ausente"?"block":"none";
+  const isAusente=(v==="ausente");
+  // Campo "Pendente de retorno?" só aparece para ausente
+  document.getElementById("field-pendente").style.display=isAusente?"block":"none";
+  // Quando AUSENTE PENDENTE: esconde todo o fluxo de PDF (cards de assinatura + botão "Gerar PDF"),
+  // porque ausente passível de retorno NÃO gera PDF e NÃO precisa de assinaturas. Isso impede que
+  // o cadastrador caia em finalizarVistoria() e fique travado pedindo assinatura do morador.
+  const cardResp=document.getElementById("card-assinatura-resp");
+  const cardTec=document.getElementById("card-assinatura-tec");
+  const sigConf=document.getElementById("sig-confirmado");
+  const btnFin=document.getElementById("btn-finalizar");
+  const btnAusente=document.querySelector('button[onclick="marcarAusentePassivelRetorno()"]');
+  // Só esconde se for AUSENTE + PENDENTE=SIM. Se status=ausente mas pendente=não (encerrar de vez),
+  // o fluxo continua mostrando assinaturas (recusa/ausente final ainda pode precisar de algum registro).
+  const pendenteSel=document.getElementById("fin-pendente");
+  const ePendente=isAusente&&pendenteSel&&pendenteSel.value==="sim";
+  if(ePendente){
+    if(cardResp)cardResp.style.display="none";
+    if(cardTec)cardTec.style.display="none";
+    if(sigConf)sigConf.style.display="none";
+    if(btnFin)btnFin.style.display="none";
+    if(btnAusente){btnAusente.style.display="block";btnAusente.classList.add("primary");}
+  }else{
+    if(cardResp)cardResp.style.display="";
+    if(cardTec)cardTec.style.display="";
+    if(btnFin)btnFin.style.display="";
+    if(btnAusente){btnAusente.style.display=isAusente?"block":"none";btnAusente.classList.remove("primary");}
+  }
 };
+// Quando o select "Pendente de retorno?" mudar, reavalia a coordenação acima
+document.addEventListener("change",ev=>{
+  if(ev.target&&ev.target.id==="fin-pendente"){
+    try{togglePendente(document.getElementById("fin-status-vistoria").value);}catch(e){}
+  }
+});
 
 async function loadPendentesCount(){
   try{
-    const q=query(collection(db,"vistorias"),where("pendente_retorno","==",true));
+    // Conta de pendentes mostrada no dash. Para cadastrador, conta só as próprias
+    // (alinhado com a regra "cadastrador só vê o que é dele"). Para master, conta tudo.
+    const filtros=[where("pendente_retorno","==",true)];
+    if(currentRole==="cadastrador")filtros.push(where("userId","==",currentUser.uid));
+    const q=query(collection(db,"vistorias"),...filtros);
     const s=await getDocs(q);
     const txt=s.size+" pendente(s)";
     ["dash-pendentes-count","dash-pendentes-count2"].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=txt;});
-  }catch(e){}
+  }catch(e){console.warn("loadPendentesCount:",e);}
 }
+
+// Modo do Master na tela de pendentes: "todos" (todos os ausentes da equipe, agrupados)
+// ou "meus" (apenas as vistorias que o master cadastrou pessoalmente — para master
+// que também atua em campo). Persistido em localStorage para sobreviver a recarregamentos.
+let _pendModoMaster=localStorage.getItem("pend_modo_master")||"todos";
+
+window.pendSetarModo=(modo)=>{
+  _pendModoMaster=modo;
+  localStorage.setItem("pend_modo_master",modo);
+  // Ajusta visual dos botões
+  const btnT=document.getElementById("pend-modo-todos"),btnM=document.getElementById("pend-modo-meus");
+  if(btnT&&btnM){
+    const ativo="background:#1d4ed8;color:#fff;border-color:#1d4ed8;flex:1";
+    const inativo="flex:1";
+    btnT.setAttribute("style",modo==="todos"?ativo:inativo);
+    btnM.setAttribute("style",modo==="meus"?ativo:inativo);
+  }
+  loadPendentes();
+};
+
+// Toggle expand/collapse de um grupo (acordeão). data-grp identifica o nó.
+window.pendToggleGrupo=(el)=>{
+  const corpo=el.nextElementSibling;
+  if(!corpo)return;
+  const aberto=corpo.style.display!=="none";
+  corpo.style.display=aberto?"none":"block";
+  const seta=el.querySelector(".pend-seta");
+  if(seta)seta.textContent=aberto?"▸":"▾";
+};
 
 async function loadPendentes(){
   const el=document.getElementById("lista-pendentes");
   el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Carregando...</p>';
+  // Filtro do master: mostra/esconde toggle "Todos vs Apenas meus"
+  const filtroDiv=document.getElementById("pendentes-filtro-master");
+  if(filtroDiv)filtroDiv.style.display=currentRole==="master"?"block":"none";
   try{
-    const q=query(collection(db,"vistorias"),where("pendente_retorno","==",true),orderBy("criadoEm","desc"));
+    // Monta a query conforme papel e modo
+    // - Cadastrador: SEMPRE só as próprias (regra de segurança + UX: ele só tem foto local das dele)
+    // - Master modo "todos": todas as pendentes da equipe (agrupadas por Usuário→Cliente→Coletor)
+    // - Master modo "meus": só as que o master cadastrou (lista plana, sem agrupamento)
+    const filtros=[where("pendente_retorno","==",true)];
+    const ehMasterTodos=(currentRole==="master"&&_pendModoMaster==="todos");
+    if(currentRole==="cadastrador"||(currentRole==="master"&&_pendModoMaster==="meus")){
+      filtros.push(where("userId","==",currentUser.uid));
+    }
+    // OBS: orderBy("criadoEm","desc") era aplicado aqui, mas combinado com 2 where
+    // (pendente_retorno + userId) exige um índice composto no Firestore. Em vez de
+    // exigir esse índice, ordenamos no cliente após buscar — listas de pendentes
+    // tipicamente têm dezenas de itens, então o custo é insignificante.
+    const q=query(collection(db,"vistorias"),...filtros);
     const snap=await getDocs(q);
-    if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum ausente pendente</p>';return;}
-    el.innerHTML="";
+    if(snap.size===0){
+      // Mensagem específica conforme o papel: cadastrador vê só as próprias, então
+      // se está vazio significa "você não tem nenhuma pendente" (situação boa).
+      const ehProprias=currentRole==="cadastrador"||(currentRole==="master"&&_pendModoMaster==="meus");
+      const msg=ehProprias
+        ? "Você não tem vistorias pendentes de retorno"
+        : "Nenhum ausente pendente";
+      el.innerHTML='<div style="text-align:center;padding:48px 24px;color:#9ca3af"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="margin-bottom:12px;opacity:0.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><p style="font-size:14px;margin:0">'+msg+'</p></div>';return;
+    }
+    // Coleta as vistorias e os IDs de usuários/clientes/coletores únicos
+    const vistorias=[];
+    const userIds=new Set(),clienteIds=new Set(),coletorIds=new Set();
     snap.forEach(d=>{
-      const v=d.data();const id=d.id;
-      const visitas=v.visitas||1;
-      const maxVisitas=3;
-      const div=document.createElement("div");div.className="list-item";div.style.cursor="pointer";
-      div.innerHTML='<div class="avatar" style="background:#fef2f2;color:#dc2626"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>'
-        +'<div class="info"><div class="title">'+(v.responsavel&&v.responsavel.nome||"--")+'</div>'
-        +'<div class="sub">'+(v.endereco&&v.endereco.rua||"")+" "+(v.endereco&&v.endereco.num||"")+" | "+(v.coletorNome||"")+" | Visita "+visitas+"/"+maxVisitas+'</div></div>'
-        +'<span style="color:#dc2626;font-size:12px;font-weight:600">'+visitas+"/"+maxVisitas+'</span>';
-      div.onclick=()=>abrirRetorno(id,v);
-      el.appendChild(div);
+      const v=d.data();vistorias.push({id:d.id,...v});
+      if(v.userId)userIds.add(v.userId);
+      if(v.clienteId)clienteIds.add(v.clienteId);
+      if(v.coletorId)coletorIds.add(v.coletorId);
     });
-  }catch(e){el.innerHTML='<p style="text-align:center;color:#dc2626;padding:24px">Erro: '+e.message+"</p>";}
+    // Ordena no cliente: mais recente primeiro (compensa a remoção do orderBy do Firestore)
+    vistorias.sort((a,b)=>{
+      const ta=(a.criadoEm&&a.criadoEm.seconds)||0;
+      const tb=(b.criadoEm&&b.criadoEm.seconds)||0;
+      return tb-ta;
+    });
+    // Resolve nomes em paralelo (somente os IDs realmente usados nesta lista)
+    const [usersMap,clientesMap,coletoresMap]=await Promise.all([
+      _resolverNomes("users",[...userIds],d=>d.nome||d.email||"--"),
+      _resolverNomes("clientes",[...clienteIds],d=>d.nome||"--"),
+      _resolverNomes("coletores",[...coletorIds],d=>d.nome||"--")
+    ]);
+    // Render: modo plano (cadastrador, ou master "apenas meus") ou agrupado (master "todos")
+    if(!ehMasterTodos){
+      el.innerHTML="";
+      vistorias.forEach(v=>el.appendChild(_pendCardItem(v)));
+    }else{
+      el.innerHTML="";
+      _pendRenderAgrupado(el,vistorias,usersMap,clientesMap,coletoresMap);
+    }
+  }catch(e){
+    el.innerHTML='<p style="text-align:center;color:#dc2626;padding:24px">Erro: '+e.message+"</p>";
+  }
+}
+
+// Busca nomes de uma coleção a partir de uma lista de IDs. Tolerante a IDs vazios
+// e a docs que sumiram (entrega "--" no lugar). Retorna { id: nome }.
+async function _resolverNomes(colecao,ids,extrair){
+  const m={};
+  if(!ids||!ids.length)return m;
+  // getDoc paralelo. Para listas grandes, valeria 'in' query, mas pendentes raramente
+  // passam de dezenas — o custo de N pequenos gets aqui é trivial.
+  await Promise.all(ids.map(async id=>{
+    try{
+      const snap=await getDoc(doc(db,colecao,id));
+      m[id]=snap.exists()?extrair(snap.data()):"--";
+    }catch(e){m[id]="--";}
+  }));
+  return m;
+}
+
+// Cria o card visual de uma vistoria pendente (item folha da árvore ou da lista plana)
+function _pendCardItem(v){
+  const visitas=v.visitas||1,maxVisitas=3;
+  const div=document.createElement("div");div.className="list-item";div.style.cursor="pointer";
+  div.innerHTML='<div class="avatar" style="background:#fef2f2;color:#dc2626"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>'
+    +'<div class="info"><div class="title">'+(v.responsavel&&v.responsavel.nome||"--")+'</div>'
+    +'<div class="sub">'+(v.endereco&&v.endereco.rua||"")+" "+(v.endereco&&v.endereco.num||"")+" | "+(v.coletorNome||"")+" | Visita "+visitas+"/"+maxVisitas+'</div></div>'
+    +'<span style="color:#dc2626;font-size:12px;font-weight:600">'+visitas+"/"+maxVisitas+'</span>';
+  div.onclick=()=>abrirRetorno(v.id,v);
+  return div;
+}
+
+// Renderiza a árvore Usuário → Cliente → Coletor, com todos os nós RECOLHIDOS por padrão.
+// Cada nível tem cabeçalho clicável com contador. Visual segue o padrão de coletor-group.
+function _pendRenderAgrupado(el,vistorias,usersMap,clientesMap,coletoresMap){
+  // Agrupa em árvore: arvore[usuario][cliente][coletor] = [vistorias]
+  const arvore={};
+  vistorias.forEach(v=>{
+    const u=usersMap[v.userId]||"(sem usuário)";
+    const c=clientesMap[v.clienteId]||"(sem cliente)";
+    const k=coletoresMap[v.coletorId]||v.coletorNome||"(sem coletor)";
+    arvore[u]=arvore[u]||{};
+    arvore[u][c]=arvore[u][c]||{};
+    arvore[u][c][k]=arvore[u][c][k]||[];
+    arvore[u][c][k].push(v);
+  });
+  // Render
+  Object.keys(arvore).sort((a,b)=>a.localeCompare(b,"pt-BR")).forEach(u=>{
+    const totU=_contarFolhas(arvore[u]);
+    const grpU=document.createElement("div");grpU.className="pend-grp";grpU.style.marginBottom="8px";
+    grpU.innerHTML=_cabecalhoGrupo(u,totU,"#1d4ed8","20",true);
+    const corpoU=document.createElement("div");corpoU.style.display="none";corpoU.style.paddingLeft="12px";
+    Object.keys(arvore[u]).sort((a,b)=>a.localeCompare(b,"pt-BR")).forEach(c=>{
+      const totC=_contarFolhas(arvore[u][c]);
+      const grpC=document.createElement("div");grpC.style.marginBottom="6px";
+      grpC.innerHTML=_cabecalhoGrupo(c,totC,"#7c3aed","16",false);
+      const corpoC=document.createElement("div");corpoC.style.display="none";corpoC.style.paddingLeft="10px";
+      Object.keys(arvore[u][c]).sort((a,b)=>a.localeCompare(b,"pt-BR")).forEach(k=>{
+        const arr=arvore[u][c][k];
+        const grpK=document.createElement("div");grpK.style.marginBottom="4px";
+        grpK.innerHTML=_cabecalhoGrupo(k,arr.length,"#0369a1","14",false);
+        const corpoK=document.createElement("div");corpoK.style.display="none";
+        arr.forEach(v=>corpoK.appendChild(_pendCardItem(v)));
+        grpK.appendChild(corpoK);grpK.children[0].onclick=()=>pendToggleGrupo(grpK.children[0]);
+        corpoC.appendChild(grpK);
+      });
+      grpC.appendChild(corpoC);grpC.children[0].onclick=()=>pendToggleGrupo(grpC.children[0]);
+      corpoU.appendChild(grpC);
+    });
+    grpU.appendChild(corpoU);grpU.children[0].onclick=()=>pendToggleGrupo(grpU.children[0]);
+    el.appendChild(grpU);
+  });
+}
+
+// Conta o número de vistorias dentro de uma sub-árvore (recursivo).
+function _contarFolhas(no){
+  let t=0;
+  if(Array.isArray(no))return no.length;
+  Object.values(no||{}).forEach(v=>t+=_contarFolhas(v));
+  return t;
+}
+
+// Cabeçalho clicável de um nó da árvore. corVerde indica nível e tamanho da fonte.
+function _cabecalhoGrupo(texto,total,cor,fonte,bold){
+  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f9fafb;border-radius:8px;cursor:pointer;border-left:3px solid '+cor+';font-size:'+fonte+'px;'+(bold?"font-weight:600":"")+'">'
+    +'<div><span class="pend-seta" style="display:inline-block;width:14px;color:'+cor+'">▸</span> '+texto+'</div>'
+    +'<span style="background:'+cor+';color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600">'+total+'</span>'
+    +'</div>';
 }
 
 let _retornoId=null,_retornoData=null;
@@ -2357,9 +2677,74 @@ window.abrirRetorno=async(id,v)=>{
   goTo("s-vistoria");renderFotos();
 };
 
-window.togglePendenteRetorno=v=>{
-  const el=document.getElementById("field-pendente-retorno");
-  if(el)el.style.display=v==="ausente"?"block":"none";
+// ===== RETOMADA DE RASCUNHO (recuperação após reload no meio da vistoria) =====
+let _rascunhoPendente=null; // segura o rascunho detectado até o usuário decidir
+
+// Chamada após o login: se houver rascunho de uma vistoria não finalizada, mostra o modal.
+async function verificarRascunho(){
+  try{
+    const r=await localBuscarRascunho();
+    if(!r||!r.vistoria)return;
+    const numFotos=(r.fotos||[]).length;
+    // Só faz sentido oferecer retomada se havia conteúdo de fato.
+    if(numFotos===0&&!(r.vistoria.checklist&&Object.keys(r.vistoria.checklist).length))
+      {await localApagarRascunho();return;}
+    _rascunhoPendente=r;
+    const v=r.vistoria;
+    const nome=(v.responsavel&&v.responsavel.nome)||"Morador não identificado";
+    const quando=r.savedAt?new Date(r.savedAt).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
+    document.getElementById("rascunho-info").innerHTML=
+      "<b>"+nome+"</b><br>"+numFotos+" foto"+(numFotos===1?"":"s")+" salva"+(numFotos===1?"":"s")
+      +(quando?"<br><span style='font-size:12px;color:#aaa'>Último salvamento: "+quando+"</span>":"");
+    showModal("modal-retomar-rascunho");
+  }catch(e){console.warn("verificarRascunho:",e);}
+}
+
+window.retomarRascunho=()=>{
+  closeModal("modal-retomar-rascunho");
+  const r=_rascunhoPendente;
+  if(!r||!r.vistoria){return;}
+  const v=r.vistoria;
+  currentVistoria={...v}; // restaura metadados (cliente, endereço, checklist, status etc.)
+  // Reconstrói fotosPendentes preservando os IDs originais (mantém numeração/ordem)
+  fotosPendentes={};
+  (r.fotos||[]).forEach((f,i)=>{
+    const fid=f.id||("d"+i+"_"+Date.now());
+    fotosPendentes[fid]={
+      id:fid,dataUrl:f.dataUrl,ambiente:f.ambiente,tipo:f.tipo,
+      legenda:f.legenda||f.tipo,
+      numero:f.numero||("Foto "+String(i+1).padStart(2,"0")),
+      patologias:f.patologias||[],combinacoes:f.combinacoes||[],
+      timestamp:f.timestamp
+    };
+  });
+  ambientesExtras=v.ambientesExtras||[];
+  // Reconstrói a UI da tela de vistoria (espelha criarVistoria/abrirRetorno)
+  const nome=(v.responsavel&&v.responsavel.nome)||"";
+  document.getElementById("v-titulo").textContent=nome?nome.split(" ")[0]:"Vistoria";
+  const tipoLaudo=v.tipoLaudo||"completo";
+  const badgeTipo=tipoLaudo==="completo"?'<span class="badge laudo" style="display:inline-block;margin-bottom:4px">Laudo Completo</span><br>':'';
+  const nomeHtml=nome?("<b>"+nome+"</b>"):'<span style="color:#888;font-style:italic">Morador não identificado</span>';
+  const enderecoTxt=(v.endereco&&v.endereco.rua||"")+", "+(v.endereco&&v.endereco.num||"")+(v.endereco&&v.endereco.comp?" - "+v.endereco.comp:"");
+  document.getElementById("v-info").innerHTML=[
+    badgeTipo+nomeHtml,
+    v.responsavel&&v.responsavel.doc?"Doc: "+v.responsavel.doc:"",
+    v.responsavel&&v.responsavel.tel?"Tel: "+v.responsavel.tel:"",
+    enderecoTxt,
+    "<span style='color:#1d4ed8;font-size:12px;font-weight:600'>↻ Retomada após recarregamento</span>"
+  ].filter(Boolean).join("<br>");
+  popularSeletorAmbiente(document.getElementById("v-ambiente"));
+  const obsEl=document.getElementById("v-obs");if(obsEl)obsEl.value=v.observacoes||"";
+  _rascunhoPendente=null;
+  goTo("s-vistoria");renderFotos();
+  showToast("Vistoria retomada — "+Object.keys(fotosPendentes).length+" foto(s) recuperada(s)",3500);
+};
+
+window.descartarRascunho=async()=>{
+  closeModal("modal-retomar-rascunho");
+  _rascunhoPendente=null;
+  await localApagarRascunho();
+  showToast("Rascunho descartado",2500);
 };
 
 window.togglePendenteRetorno=v=>{
@@ -2418,7 +2803,7 @@ async function loadNovVistoriaForm(){
   } else {
     boxReap.style.display="none";
   }
-  setTipoLaudo(localStorage.getItem("lastTipoLaudo")||"simplificado");
+  setTipoLaudo(localStorage.getItem("lastTipoLaudo")||"completo");
 }
 window.reaproveitarResponsavel=()=>{
   if(!ultimoResponsavel)return;
@@ -2502,6 +2887,7 @@ window.criarVistoria=async()=>{
   // anterior. Crítico após "Gerar PDF Novamente" ou banner pós-finalização — caminhos onde
   // _bkFotosPendentes do regeRarPDF poderia ter deixado lixo se houvesse erro.
   fotosPendentes={};assinaturaData=null;ambientesExtras=[];
+  localApagarRascunho(); // nova vistoria começa limpa; descarta rascunho anterior
   fotoAtualBlob=null;fotoAtualTipo=null;fotoAtualAmbiente=null;
   arrowImage=null;arrowPoints=[];
   _fotoSetasAcumuladas=[];_fotoOriginalBlob=null;
@@ -2517,46 +2903,21 @@ window.criarVistoria=async()=>{
   if(selTipo)selTipo.value="Vista";
   // Limpar campo de observações no início (não persiste de uma vistoria pra outra)
   const obsEl=document.getElementById("v-obs");if(obsEl)obsEl.value=currentVistoria.observacoes||"";
-  // Inicializa identificacao vazia (sera preenchida na tela s-identificacao no modo normal)
+  // Inicializa identificacao vazia (sera preenchida na tela s-identificacao no modo completo)
   currentVistoria.identificacao=currentVistoria.identificacao||null;
-  // MODO AUSENTE: pula tela de identificacao (vai direto pra fachada/foto). Identificacao
-  // pode ser preenchida depois caso a vistoria seja retomada normalmente.
-  if(window._iniciandoComoAusente){
-    goTo("s-vistoria");renderFotos();
+  // MODO COMPLETO: passa pela tela "Identificação do Imóvel" antes das fotos.
+  // EXCEÇÃO: modo Ausente pula direto pra fachada (ninguém em casa, não dá pra inspecionar).
+  // SIMPLIFICADO: vai direto pra tela de fotos como sempre fez.
+  if(tipoLaudo==="completo"&&!window._iniciandoComoAusente){
+    resetFormIdentificacao();
+    goTo("s-identificacao");
     return;
   }
-  // Reset dos campos do form de identificacao para defaults (todos checados, Misto, etc)
-  resetFormIdentificacao();
-  goTo("s-identificacao");
+  goTo("s-vistoria");renderFotos();
 };
 
-// Pre-popula o formulario de identificacao se a vistoria atual ja tiver dados salvos
-// (ex: cadastrador voltou pra tela para conferir/editar antes de finalizar)
-function renderIdentificacao(){
-  if(!currentVistoria||!currentVistoria.identificacao){
-    resetFormIdentificacao();
-    return;
-  }
-  const id=currentVistoria.identificacao;
-  const sp=id.servicosPublicos||{};
-  const elcheck=(k,v)=>{const el=document.getElementById(k);if(el)el.checked=v!==false;};
-  elcheck("id-sv-energia",sp.energia);
-  elcheck("id-sv-iluminacao",sp.iluminacao);
-  elcheck("id-sv-pavimentacao",sp.pavimentacao);
-  elcheck("id-sv-guias",sp.guias);
-  elcheck("id-sv-agua",sp.agua);
-  elcheck("id-sv-esgoto",sp.esgoto);
-  elcheck("id-sv-gas",sp.gas);
-  elcheck("id-sv-telefone",sp.telefone);
-  elcheck("id-sv-drenagem",sp.drenagem);
-  const z=document.getElementById("id-zoneamento");if(z)z.value=id.zoneamento||"Misto";
-  const g=document.getElementById("id-garagem");if(g)g.value=id.garagem||"";
-  const p=document.getElementById("id-pavimentos");if(p)p.value=id.pavimentos||"";
-  const mc=document.getElementById("id-mat-cobertura");if(mc)mc.value=(id.materiais&&id.materiais.cobertura)||"";
-  const mp=document.getElementById("id-mat-paredes");if(mp)mp.value=(id.materiais&&id.materiais.paredes)||"";
-}
-
-// Reseta o formulario de identificacao para os defaults (todos servicos checados, Misto)
+// === IDENTIFICAÇÃO DO IMÓVEL (somente no modo Completo) ===
+// Reseta o formulário para os defaults: todos os 9 serviços públicos marcados, Misto, restante vazio.
 function resetFormIdentificacao(){
   ["id-sv-energia","id-sv-iluminacao","id-sv-pavimentacao","id-sv-guias","id-sv-agua","id-sv-esgoto","id-sv-gas","id-sv-telefone","id-sv-drenagem"].forEach(id=>{
     const el=document.getElementById(id);if(el)el.checked=true;
@@ -2566,11 +2927,32 @@ function resetFormIdentificacao(){
     const el=document.getElementById(id);if(el)el.value="";
   });
 }
-
-// Coleta os dados do formulario de identificacao, salva em currentVistoria.identificacao e
-// avanca para a tela de vistoria. Todos os campos sao opcionais — campos em branco viram null.
+// Se a vistoria atual já tem dados de identificação salvos (ex: cadastrador clicou "Voltar"
+// na tela de fotos e voltou aqui pra ajustar), repreenche o formulário com esses dados.
+function renderIdentificacao(){
+  if(!currentVistoria||!currentVistoria.identificacao){resetFormIdentificacao();return;}
+  const id=currentVistoria.identificacao;
+  const sp=id.servicosPublicos||{};
+  const setck=(k,v)=>{const el=document.getElementById(k);if(el)el.checked=v!==false;};
+  setck("id-sv-energia",sp.energia);
+  setck("id-sv-iluminacao",sp.iluminacao);
+  setck("id-sv-pavimentacao",sp.pavimentacao);
+  setck("id-sv-guias",sp.guias);
+  setck("id-sv-agua",sp.agua);
+  setck("id-sv-esgoto",sp.esgoto);
+  setck("id-sv-gas",sp.gas);
+  setck("id-sv-telefone",sp.telefone);
+  setck("id-sv-drenagem",sp.drenagem);
+  const z=document.getElementById("id-zoneamento");if(z)z.value=id.zoneamento||"Misto";
+  const g=document.getElementById("id-garagem");if(g)g.value=id.garagem||"";
+  const p=document.getElementById("id-pavimentos");if(p)p.value=id.pavimentos||"";
+  const mc=document.getElementById("id-mat-cobertura");if(mc)mc.value=(id.materiais&&id.materiais.cobertura)||"";
+  const mp=document.getElementById("id-mat-paredes");if(mp)mp.value=(id.materiais&&id.materiais.paredes)||"";
+}
+// Coleta tudo do formulário, guarda em currentVistoria.identificacao e segue pra tela de fotos.
+// Todos os campos são opcionais — strings vazias ficam vazias mesmo.
 window.confirmarIdentificacao=()=>{
-  if(!currentVistoria){alert("Sessao da vistoria foi perdida. Volte e reinicie.");return;}
+  if(!currentVistoria){alert("Sessão da vistoria foi perdida. Volte e reinicie.");return;}
   currentVistoria.identificacao={
     servicosPublicos:{
       energia:document.getElementById("id-sv-energia").checked,
@@ -2591,6 +2973,8 @@ window.confirmarIdentificacao=()=>{
       paredes:document.getElementById("id-mat-paredes").value||""
     }
   };
+  // Garante que o rascunho automático capture essa atualização também.
+  if(typeof agendarSalvarRascunho==="function")agendarSalvarRascunho();
   goTo("s-vistoria");renderFotos();
 };
 
@@ -2653,7 +3037,7 @@ function renderFotos(){
     s.appendChild(gd);c.appendChild(s);
   });
 }
-window.removerFoto=id=>{delete fotosPendentes[id];renderFotos();};
+window.removerFoto=id=>{delete fotosPendentes[id];renderFotos();agendarSalvarRascunho();};
 
 // ===== DIAGNÓSTICO TEMPORÁRIO: baixa o JPEG bruto do fotosPendentes sem nenhuma alteração =====
 // Usado pra inspeção do EXIF e dimensões físicas reais que saem da câmera + canvas em cada navegador.
@@ -3689,8 +4073,7 @@ function gerarLegendaCombo(c){
   if(c.modo==="completo"){
     const cat=PATOLOGIAS_AL_MAP[c.categoria];
     const subStr=c.subs.map(n=>{const s=cat.subs.find(x=>x.n===n);return s?s.t:"?";}).join(" / ");
-    // Formato "Categoria: subitens" (ex.: "Alvenaria: Trincas / Fissuras"), sem código CNRP
-    return cat.nome+": "+subStr;
+    return c.codigo+" — "+subStr;
   }
   // Simplificado: patologias separadas por " / " (com espaço antes e depois)
   // Ex: "Parede: Fissura / Umidade / Trinca"
@@ -3704,27 +4087,10 @@ function gerarLegendaCombo(c){
 // Aplica-se apenas ao modo Simplificado — Completo mantém código CNRP por seta.
 function unificarLegendasCombos(combinacoes){
   if(!combinacoes||!combinacoes.length)return "";
-  // Modo completo: agrupar por CATEGORIA A-L, deduplicar subitens, preservar ordem.
-  // Ex.: [{Alvenaria,[1]}, {Alvenaria,[3]}, {Piso,[5]}]
-  //   → "Alvenaria: Trincas / Fissuras / Umidade / Mofo / Piso / Pavimento: Recalque"
+  // Modo completo: cada seta tem seu código próprio, não unifica
   const temCompleto=combinacoes.some(c=>c.modo==="completo");
   if(temCompleto){
-    const ordemCat=[];
-    const grupos={};
-    combinacoes.forEach(c=>{
-      if(c.modo!=="completo")return;
-      const cat=PATOLOGIAS_AL_MAP[c.categoria];
-      if(!cat)return;
-      if(!grupos[c.categoria]){grupos[c.categoria]={nome:cat.nome,subs:[],set:new Set()};ordemCat.push(c.categoria);}
-      c.subs.forEach(n=>{
-        if(!grupos[c.categoria].set.has(n)){
-          grupos[c.categoria].set.add(n);
-          const s=cat.subs.find(x=>x.n===n);
-          if(s)grupos[c.categoria].subs.push(s.t);
-        }
-      });
-    });
-    return ordemCat.map(k=>grupos[k].nome+": "+grupos[k].subs.join(" / ")).join(" / ");
+    return combinacoes.map(c=>gerarLegendaCombo(c)).join(" / ");
   }
   // Simplificado: agrupar por elemento, deduplicar patologias, preservar ordem
   const ordemElem=[];
@@ -3894,9 +4260,11 @@ function renderizarFotoComAcumuladas(tipoLaudo){
     // Se a seta foi rotacionada na edição, p.angle estará definido
     const ang=(typeof s.pontoFracao.angle==="number")?s.pontoFracao.angle:undefined;
     desenharSetaEmCanvas(ctx,tipX,tipY,origW,ang);
-    // NOTA: a caixinha de código CNRP (B1, H1) NÃO é mais desenhada sobre a foto.
-    // A patologia agora aparece descrita por extenso na legenda embaixo da foto
-    // (ex.: "Alvenaria: Trincas / Fissuras"). Sobre a imagem fica apenas a seta.
+    if(tipoLaudo==="completo"){
+      const c=s.combinacao;
+      const codigo=c&&c.modo==="completo"?c.codigo:(c&&c.codigo);
+      if(codigo)desenharCodigoCNRP(ctx,tipX,tipY,codigo,origW,ang);
+    }
   });
   return outCanvas.toDataURL("image/jpeg",0.92);
 }
@@ -4114,6 +4482,7 @@ function salvarFotoFinal(dataUrl,patologias,combinacoes){
       patologias.forEach(p=>{const arr=currentVistoria.checklist[fotoAtualAmbiente][p.col]||[];if(!arr.includes(p.pat))arr.push(p.pat);currentVistoria.checklist[fotoAtualAmbiente][p.col]=arr;});
     }
     renderFotos();showToast("Foto "+String(num).padStart(2,"0")+" salva!");
+    agendarSalvarRascunho(); // protege contra reload: persiste estado da vistoria
   });
 }
 
@@ -4159,7 +4528,14 @@ function renderFinalizacao(){
   if(blocosNormais)blocosNormais.style.display="block";
   if(btnBack)btnBack.setAttribute("onclick","goTo('s-vistoria')");
   // Limpar campos da vistoria anterior e aplicar defaults
-  const defaults={"fin-idade":"","fin-estado":"Regular","fin-status-vistoria":"concluida","fin-pendente":""};
+  // Se a vistoria foi iniciada pelo botão "Iniciar como Ausente — Passível de Retorno",
+  // o default da tela de Finalização já vem com status=ausente + pendente=sim. O togglePendente
+  // que roda em seguida cuida de esconder os cards de assinatura e o botão de PDF, deixando
+  // só o botão laranja "Ausente — Passível de Retorno". Caso contrário, defaults normais.
+  const ehModoAusente=currentVistoria&&currentVistoria._modoAusente;
+  const defaults=ehModoAusente
+    ?{"fin-idade":"","fin-estado":"Regular","fin-status-vistoria":"ausente","fin-pendente":"sim"}
+    :{"fin-idade":"","fin-estado":"Regular","fin-status-vistoria":"concluida","fin-pendente":""};
   Object.entries(defaults).forEach(([id,val])=>{
     const el=document.getElementById(id);
     if(el)el.value=val;
@@ -4227,6 +4603,8 @@ let _histSelecionadas=new Set();
 window.histToggleSelecao=(ativar)=>{
   _histModoSelecao=!!ativar;
   _histSelecionadas.clear();
+  // Ao entrar/sair do modo seleção, descarta posição salva (UI muda completamente)
+  _histScrollY=0;
   document.getElementById("hist-btn-selecionar").style.display=ativar?"none":"inline-block";
   document.getElementById("hist-btn-cancelar").style.display=ativar?"inline-block":"none";
   document.getElementById("hist-bulk-bar").style.display=ativar?"flex":"none";
@@ -4235,11 +4613,22 @@ window.histToggleSelecao=(ativar)=>{
 };
 
 window.histSelecionarTodas=()=>{
-  document.querySelectorAll("#lista-historico input.hist-check").forEach(cb=>{
-    cb.checked=true;
-    _histSelecionadas.add(cb.dataset.id);
-  });
-  _histAtualizarBulkBar();
+  // Em modo agrupado, "Selecionar Todas" pode pegar itens que ainda não estão renderizados
+  // dentro de grupos recolhidos. Vou refazer a query para garantir que pega tudo.
+  // Estratégia simples e segura: marcar todos os checkboxes visíveis e somar IDs dos
+  // checkboxes-de-dia (cada um conhece os IDs do dia inteiro via data-grp-id).
+  // Mais robusto: refaz a busca dos IDs como em loadHistorico, mas sem renderizar.
+  (async()=>{
+    try{
+      const q=query(collection(db,"vistorias"),where("userId","==",currentUser.uid));
+      const snap=await getDocs(q);
+      snap.forEach(d=>_histSelecionadas.add(d.id));
+      // Reflete nos checkboxes visíveis
+      document.querySelectorAll("#lista-historico input.hist-check").forEach(cb=>cb.checked=true);
+      document.querySelectorAll("#lista-historico input.hist-check-dia").forEach(cb=>cb.checked=true);
+      _histAtualizarBulkBar();
+    }catch(e){console.error("histSelecionarTodas:",e);}
+  })();
 };
 
 window._histAtualizarBulkBar=()=>{
@@ -4275,41 +4664,208 @@ window.excluirSelecionadas=async()=>{
   histToggleSelecao(false);
 };
 
+// Estado preservado entre navegações: quais grupos estão expandidos e o scroll.
+// Limpo só quando o modo de seleção é ativado (porque a UI muda completamente).
+let _histGruposAbertos=new Set();
+let _histScrollY=0;
+
 async function loadHistorico(){
-  const el=document.getElementById("lista-historico");el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Carregando...</p>';
+  const el=document.getElementById("lista-historico");
+  el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Carregando...</p>';
   try{
     const q=query(collection(db,"vistorias"),where("userId","==",currentUser.uid));
-    const snap=await getDocs(q);el.innerHTML="";
-    if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhuma vistoria</p>';return;}
+    // OBS: query original buscava só do próprio user (cadastrador) — mesmo para Master.
+    // Mantive esse comportamento porque a tela se chama "Minhas vistorias". Master que
+    // queira ver as de outros usa o relatório/dashboard. (Confirmar com Thamyres se mudar.)
+    const snap=await getDocs(q);
+    if(snap.size===0){
+      el.innerHTML='<div style="text-align:center;padding:48px 24px;color:#9ca3af"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="margin-bottom:12px;opacity:0.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg><p style="font-size:14px;margin:0">Nenhuma vistoria registrada</p></div>';
+      return;
+    }
     const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));
     docs.sort((a,b)=>(b.criadoEm&&b.criadoEm.seconds||0)-(a.criadoEm&&a.criadoEm.seconds||0));
+
+    // Resolve nomes de usuário (só pra Master — cadastrador vê só as próprias)
+    let usersMap={};
+    if(currentRole==="master"){
+      const userIds=new Set();
+      docs.forEach(v=>{if(v.userId)userIds.add(v.userId);});
+      usersMap=await _resolverNomes("users",[...userIds],d=>d.nome||d.email||"--");
+    }
+
+    el.innerHTML="";
+    // Hierarquia:
+    //   Master:     Data → Usuário → Cliente → [vistorias]
+    //   Cadastrador: Data → Cliente → [vistorias]   (sem nível Usuário — é sempre ele)
+    const arvore={};
     docs.forEach(v=>{
-      const div=document.createElement("div");div.className="list-item";div.style.cursor="pointer";
-      const tipoBadge=v.tipoLaudo==="completo"?'<span class="badge laudo" style="margin-right:6px">Completo</span>':'';
-      const corpoItem='<div class="avatar" style="background:#f3f4f6;color:#374151"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></div><div class="info"><div class="title">'+(v.responsavel&&v.responsavel.nome||"--")+'</div><div class="sub">'+(v.endereco&&v.endereco.rua||"")+" "+( v.endereco&&v.endereco.num||"")+" | "+(v.totalFotos||0)+" fotos | "+(v.data||"")+'</div></div><div class="hist-actions">'+tipoBadge+'<span class="badge '+({concluida:"ok",parcial:"cad",externa:"cad",recusa:"master",ausente:"com"}[v.status]||"ok")+'">'+({"concluida":"Finalizado","parcial":"Parcial","externa":"Externa","recusa":"Recusa","ausente":"Ausente"}[v.status]||"Finalizado")+"</span></div>";
-      if(_histModoSelecao){
-        const isChecked=_histSelecionadas.has(v.id);
-        div.innerHTML='<input type="checkbox" class="hist-check" data-id="'+v.id+'" '+(isChecked?"checked":"")+' style="width:20px;height:20px;margin-right:6px;flex-shrink:0;accent-color:#dc2626">'+corpoItem;
-        const cb=div.querySelector("input.hist-check");
-        const toggle=()=>{
-          if(cb.checked)_histSelecionadas.add(v.id);
-          else _histSelecionadas.delete(v.id);
-          _histAtualizarBulkBar();
-        };
-        cb.addEventListener("change",toggle);
-        // Clicar no item inteiro também alterna o checkbox
-        div.onclick=(e)=>{
-          if(e.target===cb)return; // já tratado pelo change
-          cb.checked=!cb.checked;
-          toggle();
-        };
-      } else {
-        div.innerHTML=corpoItem;
-        div.onclick=()=>abrirDetalheVistoria(v.id,v);
+      const dataKey=_dataChave(v.criadoEm);
+      const userKey=usersMap[v.userId]||"(sem usuário)";
+      const cliKey=v.clienteNome||"(sem cliente)";
+      arvore[dataKey]=arvore[dataKey]||{};
+      if(currentRole==="master"){
+        arvore[dataKey][userKey]=arvore[dataKey][userKey]||{};
+        arvore[dataKey][userKey][cliKey]=arvore[dataKey][userKey][cliKey]||[];
+        arvore[dataKey][userKey][cliKey].push(v);
+      }else{
+        arvore[dataKey][cliKey]=arvore[dataKey][cliKey]||[];
+        arvore[dataKey][cliKey].push(v);
       }
-      el.appendChild(div);
     });
-  }catch(e){el.innerHTML='<p style="text-align:center;color:#dc2626;padding:24px">Erro: '+e.message+"</p>";}
+
+    // Render: datas ordenadas decrescente (mais recente primeiro)
+    Object.keys(arvore).sort((a,b)=>_dataChaveSort(b)-_dataChaveSort(a)).forEach(dataKey=>{
+      const noData=arvore[dataKey];
+      const totalDia=_contarFolhas(noData);
+      const idDia="hist-d-"+dataKey;
+      const grpData=document.createElement("div");grpData.style.marginBottom="8px";
+      grpData.innerHTML=_histCabecalho(idDia,dataKey,totalDia,"#1d4ed8","15",true,_histModoSelecao);
+      const corpoData=document.createElement("div");
+      corpoData.style.display=_histGruposAbertos.has(idDia)?"block":"none";
+      corpoData.style.paddingLeft="12px";
+
+      const renderClientes=(nivelPai,corpo)=>{
+        Object.keys(nivelPai).sort((a,b)=>a.localeCompare(b,"pt-BR")).forEach(cliKey=>{
+          const arr=nivelPai[cliKey];
+          const idCli=idDia+"-c-"+_slug(cliKey);
+          const grpCli=document.createElement("div");grpCli.style.marginBottom="4px";
+          grpCli.innerHTML=_histCabecalho(idCli,cliKey,arr.length,"#0369a1","13",false,false);
+          const corpoCli=document.createElement("div");
+          corpoCli.style.display=_histGruposAbertos.has(idCli)?"block":"none";
+          arr.forEach(v=>corpoCli.appendChild(_histItemCard(v)));
+          grpCli.appendChild(corpoCli);
+          grpCli.children[0].onclick=()=>_histToggleGrupo(idCli,grpCli.children[0],corpoCli);
+          corpo.appendChild(grpCli);
+        });
+      };
+
+      if(currentRole==="master"){
+        Object.keys(noData).sort((a,b)=>a.localeCompare(b,"pt-BR")).forEach(userKey=>{
+          const noUser=noData[userKey];
+          const totalUser=_contarFolhas(noUser);
+          const idUser=idDia+"-u-"+_slug(userKey);
+          const grpUser=document.createElement("div");grpUser.style.marginBottom="6px";
+          grpUser.innerHTML=_histCabecalho(idUser,userKey,totalUser,"#7c3aed","14",false,false);
+          const corpoUser=document.createElement("div");
+          corpoUser.style.display=_histGruposAbertos.has(idUser)?"block":"none";
+          corpoUser.style.paddingLeft="10px";
+          renderClientes(noUser,corpoUser);
+          grpUser.appendChild(corpoUser);
+          grpUser.children[0].onclick=()=>_histToggleGrupo(idUser,grpUser.children[0],corpoUser);
+          corpoData.appendChild(grpUser);
+        });
+      }else{
+        // Cadastrador: pula nível Usuário, vai direto Data → Cliente
+        renderClientes(noData,corpoData);
+      }
+
+      grpData.appendChild(corpoData);
+      // Listener do cabeçalho da Data: clicar no texto expande; clicar no checkbox seleciona dia inteiro
+      grpData.children[0].addEventListener("click",ev=>{
+        // Se clicou no checkbox da Data (seleção em massa do dia), não expande
+        if(ev.target.classList&&ev.target.classList.contains("hist-check-dia"))return;
+        _histToggleGrupo(idDia,grpData.children[0],corpoData);
+      });
+      // Wire-up do checkbox de dia inteiro (se modo seleção)
+      const cbDia=grpData.querySelector(".hist-check-dia");
+      if(cbDia){
+        // Coleta IDs de todas as vistorias do dia (cruza todos os usuários e clientes)
+        const idsDoDia=[];
+        const recolher=no=>{
+          if(Array.isArray(no))no.forEach(v=>idsDoDia.push(v.id));
+          else Object.values(no||{}).forEach(recolher);
+        };
+        recolher(noData);
+        cbDia.addEventListener("change",()=>{
+          if(cbDia.checked)idsDoDia.forEach(id=>_histSelecionadas.add(id));
+          else idsDoDia.forEach(id=>_histSelecionadas.delete(id));
+          // Atualiza visualmente os checkboxes dos itens individuais já expandidos
+          idsDoDia.forEach(id=>{
+            const cb=document.querySelector('#lista-historico input.hist-check[data-id="'+id+'"]');
+            if(cb)cb.checked=cbDia.checked;
+          });
+          _histAtualizarBulkBar();
+        });
+      }
+      el.appendChild(grpData);
+    });
+
+    // Restaura a posição do scroll (preservação ao voltar do detalhe)
+    if(_histScrollY)setTimeout(()=>{window.scrollTo(0,_histScrollY);},0);
+  }catch(e){
+    el.innerHTML='<p style="text-align:center;color:#dc2626;padding:24px">Erro: '+e.message+"</p>";
+  }
+}
+
+// Toggle expand/collapse de um grupo. Persiste estado em _histGruposAbertos.
+function _histToggleGrupo(id,cabecalho,corpo){
+  const aberto=corpo.style.display!=="none";
+  corpo.style.display=aberto?"none":"block";
+  if(aberto)_histGruposAbertos.delete(id);
+  else _histGruposAbertos.add(id);
+  const seta=cabecalho.querySelector(".hist-seta");
+  if(seta)seta.textContent=aberto?"▸":"▾";
+}
+
+// Cria o cabeçalho clicável de um grupo. Se ehData=true e modoSelecao=true,
+// inclui checkbox lateral pra selecionar todas as vistorias daquele dia.
+function _histCabecalho(id,texto,total,cor,fonte,bold,incluirCheckboxDia){
+  const aberto=_histGruposAbertos.has(id);
+  const cbHtml=incluirCheckboxDia
+    ? '<input type="checkbox" class="hist-check-dia" data-grp-id="'+id+'" style="width:18px;height:18px;margin-right:8px;flex-shrink:0;accent-color:#1d4ed8" onclick="event.stopPropagation()">'
+    : '';
+  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f9fafb;border-radius:8px;cursor:pointer;border-left:3px solid '+cor+';font-size:'+fonte+'px;'+(bold?"font-weight:600":"")+'">'
+    +'<div style="display:flex;align-items:center">'+cbHtml+'<span class="hist-seta" style="display:inline-block;width:14px;color:'+cor+'">'+(aberto?"▾":"▸")+'</span> '+texto+'</div>'
+    +'<span style="background:'+cor+';color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600">'+total+'</span>'
+    +'</div>';
+}
+
+// Item visual de uma vistoria. Reutiliza o markup que já existia, só extraído pra função.
+function _histItemCard(v){
+  const div=document.createElement("div");div.className="list-item";div.style.cursor="pointer";
+  const tipoBadge=v.tipoLaudo==="completo"?'<span class="badge laudo" style="margin-right:6px">Completo</span>':'';
+  const statusBadge='<span class="badge '+({concluida:"ok",parcial:"cad",externa:"cad",recusa:"master",ausente:"com"}[v.status]||"ok")+'">'+({"concluida":"Finalizado","parcial":"Parcial","externa":"Externa","recusa":"Recusa","ausente":"Ausente"}[v.status]||"Finalizado")+'</span>';
+  const corpoItem='<div class="avatar" style="background:#f3f4f6;color:#374151"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></div><div class="info"><div class="title">'+(v.responsavel&&v.responsavel.nome||"--")+'</div><div class="sub">'+(v.endereco&&v.endereco.rua||"")+" "+(v.endereco&&v.endereco.num||"")+" | "+(v.totalFotos||0)+" fotos | "+(v.data||"")+'</div></div><div class="hist-actions">'+tipoBadge+statusBadge+'</div>';
+  if(_histModoSelecao){
+    const isChecked=_histSelecionadas.has(v.id);
+    div.innerHTML='<input type="checkbox" class="hist-check" data-id="'+v.id+'" '+(isChecked?"checked":"")+' style="width:20px;height:20px;margin-right:6px;flex-shrink:0;accent-color:#dc2626">'+corpoItem;
+    const cb=div.querySelector("input.hist-check");
+    const toggle=()=>{
+      if(cb.checked)_histSelecionadas.add(v.id);
+      else _histSelecionadas.delete(v.id);
+      _histAtualizarBulkBar();
+    };
+    cb.addEventListener("change",toggle);
+    div.onclick=(e)=>{
+      if(e.target===cb)return;
+      cb.checked=!cb.checked;
+      toggle();
+    };
+  }else{
+    div.innerHTML=corpoItem;
+    div.onclick=()=>{
+      _histScrollY=window.scrollY||0;
+      abrirDetalheVistoria(v.id,v);
+    };
+  }
+  return div;
+}
+
+// Converte Timestamp em chave "DD/MM/AAAA" pra agrupar por dia
+function _dataChave(ts){
+  if(!ts||!ts.seconds)return "(sem data)";
+  const d=new Date(ts.seconds*1000);
+  return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();
+}
+// Converte chave "DD/MM/AAAA" em timestamp pra ordenar
+function _dataChaveSort(s){
+  if(s==="(sem data)")return 0;
+  const[d,m,a]=s.split("/");
+  return new Date(+a,+m-1,+d).getTime();
+}
+// Slug seguro pra usar como ID HTML (sem espaços, acentos, etc)
+function _slug(s){
+  return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
 }
 
 function abrirDetalheVistoria(id,data){
@@ -4423,6 +4979,15 @@ window.salvarEdicaoResponsavel=async()=>{
   // não faz mais sentido — zerar pra não aparecer mais na tela de pendentes.
   if(statusAntigo==="ausente"&&novoStatus!=="ausente"){
     updates.pendente_retorno=false;
+  }
+  // data_finalizacao: grava apenas se a vistoria está sendo finalizada AGORA e
+  // ainda não tem o campo (vistorias antigas). Nunca sobrescreve uma data existente —
+  // preserva o momento real da finalização original.
+  const ehFinalizacaoNova=
+    (novoStatus!=="ausente"||(novoStatus==="ausente"&&!vistoriaDetalheData.pendente_retorno))
+    && !vistoriaDetalheData.data_finalizacao;
+  if(ehFinalizacaoNova){
+    updates.data_finalizacao=serverTimestamp();
   }
   try{
     await updateDoc(doc(db,"vistorias",vistoriaDetalheId),updates);
@@ -4957,7 +5522,7 @@ window.finalizarVistoria=async()=>{
     const ML=12.7,MT=12.7,MR=12.7,MB=12.7; // 0.5 inch todos os lados
     const CW=PW-ML-MR; // 184.6mm largura util
 
-    const HDR=10;    // altura do cabeçalho enxuto (barra Local/Data) do Anexo II
+    const HDR=47;
     const LEGH=8;    // altura legenda
     const FPL=(CW-1)/2;
     const FPR=(CW-1)/2;
@@ -4987,7 +5552,7 @@ window.finalizarVistoria=async()=>{
       const pF=pagFotos[pg].fotos;
       const isP=pagFotos[pg].isPrimeira;
       const locais=[...new Set(pF.map(f=>f.ambiente))];
-      pdfHeaderFotos(pdf,ML,PW,CW,currentVistoria,locais.join(" / "),MT);
+      pdfHeader(pdf,ML,PW,CW,currentVistoria,locais.join(" / "),logoSrc,HDR,MT,logoPrep);
       let y=Y0;
 
       if(isP&&pF.length>0){
@@ -5246,6 +5811,10 @@ window.finalizarVistoria=async()=>{
     // Salvar Firebase (sem fotos — fotos vão para IndexedDB local-only) + download
     // OBS: assinaturaResp gravada no Firestore (necessária para regerar comprovante depois).
     const vDoc={clienteId:currentVistoria.clienteId,coletorId:currentVistoria.coletorId,clienteNome:currentVistoria.clienteNome,clienteRRT:currentVistoria.clienteRRT,coletorNome:currentVistoria.coletorNome,responsavel:currentVistoria.responsavel,endereco:currentVistoria.endereco,ocupacao:currentVistoria.ocupacao,tipo:currentVistoria.tipo,tipoLaudo:currentVistoria.tipoLaudo||"simplificado",estado:currentVistoria.estado,idade:currentVistoria.idade,data:currentVistoria.data,dataCompleta:currentVistoria.dataCompleta,userId:currentUser.uid,checklist:currentVistoria.checklist,ambientesExtras:ambientesExtras||[],observacoes:currentVistoria.observacoes,identificacao:currentVistoria.identificacao||null,totalFotos:Object.keys(fotosPendentes).length,status:currentVistoria.statusVistoria||"concluida",pendente_retorno:isPendente,visitas:currentVistoria.visitas||1,criadoEm:serverTimestamp(),assinaturaResp:assinaturaData||null};
+    // data_finalizacao: gravada apenas quando a vistoria está sendo finalizada (não pendente).
+    // Esse campo serve à coluna "Data da vistoria" da planilha do cliente e nunca deve ser
+    // sobrescrito em edições posteriores — preserva o momento real da finalização.
+    if(!isPendente)vDoc.data_finalizacao=serverTimestamp();
     // (A gravação no Firestore foi movida para DEPOIS da geração do PDF — ver abaixo.)
     // ============================================================================
     // ORDEM CRÍTICA: gerar o PDF (e ZIP) ANTES de qualquer escrita no Firestore.
@@ -5348,6 +5917,7 @@ window.finalizarVistoria=async()=>{
       criadoEmTs:Date.now()
     };
     currentVistoria=null;fotosPendentes={};assinaturaData=null;ambientesExtras=[];
+    localApagarRascunho(); // vistoria finalizada: rascunho não é mais necessário
     // Recarrega a tela de Finalização para mostrar o estado de sucesso com botões
     renderFinalizacao();
   }catch(e){
@@ -5429,7 +5999,8 @@ window.marcarAusentePassivelRetorno=async()=>{
     showToast("Ausente registrado! Disponível em \"Ausentes Pendentes\" para retorno.",4500);
     // Limpar estado e voltar
     currentVistoria=null;fotosPendentes={};assinaturaData=null;ambientesExtras=[];
-    goTo("s-pendentes");
+    localApagarRascunho(); // ausente registrado e persistido: descarta rascunho
+    goTo("s-dash"); // volta para a página inicial, pronto para nova vistoria
   }catch(e){
     console.error("marcarAusentePassivelRetorno:",e);
     alert("Erro ao registrar ausência: "+(e.message||"desconhecido"));
@@ -5612,20 +6183,6 @@ async function shareOrDownload(blob,nome,mime){
   setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
 
-// Cabeçalho ENXUTO para as páginas do Anexo II (relatório fotográfico): apenas a barra
-// "Local / Data Vistoria", sem o bloco de Informações do Responsável (nome, endereço, coletor).
-// Retorna a altura ocupada (mm) para que o layout das fotos parta logo abaixo.
-function pdfHeaderFotos(pdf,ML,PW,CW,v,local,MT){
-  const h=8; // altura da barra
-  pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.4);
-  pdf.rect(ML,MT,CW,h,"S");
-  pdf.setFont("helvetica","bold");pdf.setFontSize(8.5);
-  pdf.text("Local:  "+(local||""),ML+1.5,MT+h*0.66);
-  pdf.text("Data Vistoria:  "+(v.data||""),ML+CW-1.5,MT+h*0.66,{align:"right"});
-  pdf.setLineWidth(0.2);pdf.line(ML+CW/2,MT,ML+CW/2,MT+h);
-  return h;
-}
-
 function pdfHeader(pdf,ML,PW,CW,v,local,logoSrc,HDR,MT,logoPrep,showLocalBar){
   // showLocalBar=false na página de checklist (remove linha Local/Data)
   // Proporções das 9 linhas do modelo (total 49.1mm, escalado para HDR)
@@ -5712,25 +6269,36 @@ function pdfHeader(pdf,ML,PW,CW,v,local,logoSrc,HDR,MT,logoPrep,showLocalBar){
   pdf.line(ML+CW*(9.3/12),lY5,ML+CW*(9.3/12),lY6);
   pdf.line(ML,lY6,ML+CW,lY6);
 
-  // === R8: Coletor | Estado de Conservação | Idade Aparente ===
+  // === R8: Coletor | Ocupação | Estado de Conservação | Idade Aparente ===
+  // 4 células: divisores em 3/12, 6/12 e 9.5/12 da largura. O label "Estado de Conservação"
+  // é longo (24 chars), por isso a célula dele tem 3.5/12 enquanto Coletor e Ocupação ficam com 3/12.
   const colL="Coletor:  ";
   pdf.setFont("helvetica","bold");pdf.setFontSize(7.5);
   pdf.text(colL,ML+1.5,cy(lY6,h8));
   pdf.setFont("helvetica","normal");pdf.text(v.coletorNome||"",ML+1.5+pdf.getTextWidth(colL),cy(lY6,h8));
+  // Tipo de Ocupação — célula 2
+  if(v.ocupacao){
+    const ocupL="Ocupação:  ";
+    pdf.setFont("helvetica","bold");pdf.setFontSize(7.5);
+    pdf.text(ocupL,ML+CW*(3/12)+1.5,cy(lY6,h8));
+    pdf.setFont("helvetica","normal");
+    pdf.text(v.ocupacao,ML+CW*(3/12)+1.5+pdf.getTextWidth(ocupL),cy(lY6,h8));
+    pdf.setLineWidth(0.2);pdf.line(ML+CW*(3/12),lY6,ML+CW*(3/12),lY7);
+  }
   if(v.estado){
     const estL="Estado de Conservação:  ";
     pdf.setFont("helvetica","bold");pdf.setFontSize(7.5);
-    pdf.text(estL,ML+CW*(3.5/12)+1.5,cy(lY6,h8));
+    pdf.text(estL,ML+CW*(6/12)+1.5,cy(lY6,h8));
     pdf.setFont("helvetica","normal");
-    pdf.text(" "+v.estado,ML+CW*(3.5/12)+1.5+pdf.getTextWidth(estL),cy(lY6,h8));
-    pdf.setLineWidth(0.2);pdf.line(ML+CW*(3.5/12),lY6,ML+CW*(3.5/12),lY7);
+    pdf.text(" "+v.estado,ML+CW*(6/12)+1.5+pdf.getTextWidth(estL),cy(lY6,h8));
+    pdf.setLineWidth(0.2);pdf.line(ML+CW*(6/12),lY6,ML+CW*(6/12),lY7);
     if(v.idade){
       const idL="Idade Aparente:  ";
       pdf.setFont("helvetica","bold");pdf.setFontSize(7.5);
-      pdf.text(idL,ML+CW*(8.5/12)+1.5,cy(lY6,h8));
+      pdf.text(idL,ML+CW*(9.5/12)+1.5,cy(lY6,h8));
       pdf.setFont("helvetica","normal");
-      pdf.text(" "+v.idade+" anos",ML+CW*(8.5/12)+1.5+pdf.getTextWidth(idL),cy(lY6,h8));
-      pdf.setLineWidth(0.2);pdf.line(ML+CW*(8.5/12),lY6,ML+CW*(8.5/12),lY7);
+      pdf.text(" "+v.idade+" anos",ML+CW*(9.5/12)+1.5+pdf.getTextWidth(idL),cy(lY6,h8));
+      pdf.setLineWidth(0.2);pdf.line(ML+CW*(9.5/12),lY6,ML+CW*(9.5/12),lY7);
     }
   }
   pdf.setLineWidth(0.3);pdf.line(ML,lY7,ML+CW,lY7);
