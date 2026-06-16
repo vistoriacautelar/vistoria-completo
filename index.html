@@ -409,7 +409,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px">
           <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Telhas de Barro" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Telhas de Barro</label>
           <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Telhas de Fibrocimento" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Telhas de Fibrocimento</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Telha Metálica" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Telha Metálica</label>
           <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Laje de Concreto" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Laje de Concreto</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Forro de Madeira" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Forro de Madeira</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Forro PVC" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Forro PVC</label>
           <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Outro" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Outro</label>
         </div>
       </div>
@@ -1941,17 +1944,142 @@ window.previewLogoUpload=e=>{const file=e.target.files[0];if(!file)return;const 
 
 function mkLI(av,title,sub,act){const d=document.createElement("div");d.className="list-item";d.innerHTML=av+'<div class="info"><div class="title">'+title+'</div><div class="sub">'+sub+'</div></div>'+act;return d;}
 
-async function loadPrestadores(){const snap=await getDocs(collection(db,"prestadores"));const el=document.getElementById("lista-prestadores");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum prestador</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));docs.forEach(p=>{const av=p.logo?'<div class="avatar" style="background:#fce7f3"><img src="'+p.logo+'" style="width:36px;height:36px;object-fit:contain;border-radius:50%"></div>':'<div class="avatar" style="background:#fce7f3;color:#9d174d">'+p.nome.charAt(0)+"</div>";const def=p.isDefault?'<span class="badge ok">Padrao</span>':'<button class="btn small" onclick="event.stopPropagation();setDefaultPrestador(\''+p.id+'\')" style="color:#007aff;border-color:#007aff;font-size:11px">Padrao</button>';const del='<button class="btn small danger" onclick="event.stopPropagation();deletarPrestador(\''+p.id+'\')">Excluir</button>';el.appendChild(mkLI(av,p.nome+(p.isDefault?" (Padrao)":""),p.cnpj||"","<div style='display:flex;gap:6px;flex-shrink:0'>"+def+del+"</div>"));});}
-window.salvarPrestador=async()=>{const nome=document.getElementById("mp-nome").value.trim();if(!nome)return alert("Informe o nome");const isDefault=document.getElementById("mp-default").checked;const data={nome,cnpj:document.getElementById("mp-cnpj").value.trim(),endereco:document.getElementById("mp-end").value.trim(),email:document.getElementById("mp-email").value.trim(),isDefault,criadoEm:serverTimestamp()};if(logoB64Upload)data.logo=logoB64Upload;if(isDefault){const q=query(collection(db,"prestadores"),where("isDefault","==",true));const s=await getDocs(q);for(const d of s.docs)await updateDoc(doc(db,"prestadores",d.id),{isDefault:false});}await addDoc(collection(db,"prestadores"),data);closeModal("modal-prestador");["mp-nome","mp-cnpj","mp-end","mp-email"].forEach(id=>document.getElementById(id).value="");document.getElementById("mp-default").checked=false;document.getElementById("mp-logo-file").value="";document.getElementById("mp-logo-preview").style.display="none";logoB64Upload=null;await loadPrestadorDefault();loadPrestadores();};
+async function loadPrestadores(){const snap=await getDocs(collection(db,"prestadores"));const el=document.getElementById("lista-prestadores");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum prestador</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));docs.forEach(p=>{const av=p.logo?'<div class="avatar" style="background:#fce7f3"><img src="'+p.logo+'" style="width:36px;height:36px;object-fit:contain;border-radius:50%"></div>':'<div class="avatar" style="background:#fce7f3;color:#9d174d">'+p.nome.charAt(0)+"</div>";const def=p.isDefault?'<span class="badge ok">Padrao</span>':'<button class="btn small" onclick="event.stopPropagation();setDefaultPrestador(\''+p.id+'\')" style="color:#007aff;border-color:#007aff;font-size:11px">Padrao</button>';const edit='<button class="btn small" onclick="event.stopPropagation();abrirEditarPrestador(\''+p.id+'\')" style="color:#374151;border-color:#9ca3af;font-size:11px">Editar</button>';const del='<button class="btn small danger" onclick="event.stopPropagation();deletarPrestador(\''+p.id+'\')">Excluir</button>';el.appendChild(mkLI(av,p.nome+(p.isDefault?" (Padrao)":""),p.cnpj||"","<div style='display:flex;gap:6px;flex-shrink:0'>"+def+edit+del+"</div>"));});}
+// Abre o modal de prestador em MODO EDIÇÃO, pre-populando os campos.
+// O salvarPrestador detecta se window._editandoPrestadorId está definido para
+// fazer UPDATE em vez de ADD.
+window.abrirEditarPrestador=async id=>{
+  try{
+    const ds=await getDoc(doc(db,"prestadores",id));
+    if(!ds.exists()){alert("Prestador não encontrado.");return;}
+    const p=ds.data();
+    window._editandoPrestadorId=id;
+    document.getElementById("mp-nome").value=p.nome||"";
+    document.getElementById("mp-cnpj").value=p.cnpj||"";
+    document.getElementById("mp-end").value=p.endereco||"";
+    document.getElementById("mp-email").value=p.email||"";
+    document.getElementById("mp-default").checked=!!p.isDefault;
+    // Preview do logo atual (se houver)
+    const prev=document.getElementById("mp-logo-preview");
+    if(p.logo){prev.src=p.logo;prev.style.display="block";logoB64Upload=null;} // mantém o existente se usuário não trocar
+    else{prev.style.display="none";logoB64Upload=null;}
+    document.querySelector("#modal-prestador h3").textContent="Editar Prestador";
+    showModal("modal-prestador");
+  }catch(e){console.error("abrirEditarPrestador:",e);alert("Erro ao abrir edição: "+(e.message||e));}
+};
+window.salvarPrestador=async()=>{
+  const nome=document.getElementById("mp-nome").value.trim();
+  if(!nome)return alert("Informe o nome");
+  const isDefault=document.getElementById("mp-default").checked;
+  const data={nome,cnpj:document.getElementById("mp-cnpj").value.trim(),endereco:document.getElementById("mp-end").value.trim(),email:document.getElementById("mp-email").value.trim(),isDefault};
+  if(logoB64Upload)data.logo=logoB64Upload; // só sobrescreve logo se novo foi escolhido
+  // Se está marcando como padrão, desmarca os outros antes
+  if(isDefault){
+    const q=query(collection(db,"prestadores"),where("isDefault","==",true));
+    const s=await getDocs(q);
+    for(const d of s.docs){
+      if(d.id!==window._editandoPrestadorId)await updateDoc(doc(db,"prestadores",d.id),{isDefault:false});
+    }
+  }
+  if(window._editandoPrestadorId){
+    // MODO EDIÇÃO: update
+    data.atualizadoEm=serverTimestamp();
+    await updateDoc(doc(db,"prestadores",window._editandoPrestadorId),data);
+  } else {
+    // MODO NOVO: add
+    data.criadoEm=serverTimestamp();
+    await addDoc(collection(db,"prestadores"),data);
+  }
+  closeModal("modal-prestador");
+  // Reset do modal (importante pra próxima abertura ser modo "Novo")
+  window._editandoPrestadorId=null;
+  ["mp-nome","mp-cnpj","mp-end","mp-email"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("mp-default").checked=false;
+  document.getElementById("mp-logo-file").value="";
+  document.getElementById("mp-logo-preview").style.display="none";
+  document.querySelector("#modal-prestador h3").textContent="Cadastrar Prestador";
+  logoB64Upload=null;
+  await loadPrestadorDefault();
+  loadPrestadores();
+};
 window.setDefaultPrestador=async id=>{const q=query(collection(db,"prestadores"),where("isDefault","==",true));const s=await getDocs(q);for(const d of s.docs)await updateDoc(doc(db,"prestadores",d.id),{isDefault:false});await updateDoc(doc(db,"prestadores",id),{isDefault:true});await loadPrestadorDefault();loadPrestadores();};
 window.deletarPrestador=async id=>{if(!confirm("Excluir?"))return;await deleteDoc(doc(db,"prestadores",id));loadPrestadores();};
 
-async function loadClientes(){const snap=await getDocs(collection(db,"clientes"));const el=document.getElementById("lista-clientes");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum cliente</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));docs.forEach(cl=>{const av='<div class="avatar" style="background:#ede9fe;color:#5b21b6">'+cl.nome.charAt(0)+"</div>";const act=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarCliente(\''+cl.id+'\')">Excluir</button>':'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';el.appendChild(mkLI(av,cl.nome,"RRT: "+cl.rrt,act));});}
-window.salvarCliente=async()=>{const n=document.getElementById("mc-nome").value.trim();const r=document.getElementById("mc-rrt").value.trim();if(!n||!r)return alert("Preencha nome e RRT");await addDoc(collection(db,"clientes"),{nome:n,rrt:r,resp:document.getElementById("mc-resp").value.trim(),criadoEm:serverTimestamp()});closeModal("modal-cliente");["mc-nome","mc-rrt","mc-resp"].forEach(id=>document.getElementById(id).value="");loadClientes();};
+async function loadClientes(){const snap=await getDocs(collection(db,"clientes"));const el=document.getElementById("lista-clientes");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum cliente</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));docs.forEach(cl=>{const av='<div class="avatar" style="background:#ede9fe;color:#5b21b6">'+cl.nome.charAt(0)+"</div>";const edit='<button class="btn small" onclick="event.stopPropagation();abrirEditarCliente(\''+cl.id+'\')" style="color:#374151;border-color:#9ca3af;font-size:11px">Editar</button>';const del=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarCliente(\''+cl.id+'\')">Excluir</button>':'';const act=currentRole==="master"?"<div style='display:flex;gap:6px;flex-shrink:0'>"+edit+del+"</div>":'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';el.appendChild(mkLI(av,cl.nome,"RRT: "+cl.rrt,act));});}
+window.abrirEditarCliente=async id=>{
+  try{
+    const ds=await getDoc(doc(db,"clientes",id));
+    if(!ds.exists()){alert("Cliente não encontrado.");return;}
+    const c=ds.data();
+    window._editandoClienteId=id;
+    document.getElementById("mc-nome").value=c.nome||"";
+    document.getElementById("mc-rrt").value=c.rrt||"";
+    document.getElementById("mc-resp").value=c.resp||"";
+    document.querySelector("#modal-cliente h3").textContent="Editar Cliente";
+    showModal("modal-cliente");
+  }catch(e){console.error("abrirEditarCliente:",e);alert("Erro ao abrir edição: "+(e.message||e));}
+};
+window.salvarCliente=async()=>{
+  const n=document.getElementById("mc-nome").value.trim();
+  const r=document.getElementById("mc-rrt").value.trim();
+  if(!n||!r)return alert("Preencha nome e RRT");
+  const data={nome:n,rrt:r,resp:document.getElementById("mc-resp").value.trim()};
+  if(window._editandoClienteId){
+    data.atualizadoEm=serverTimestamp();
+    await updateDoc(doc(db,"clientes",window._editandoClienteId),data);
+  } else {
+    data.criadoEm=serverTimestamp();
+    await addDoc(collection(db,"clientes"),data);
+  }
+  // Limpa cache local pra próxima busca trazer dados atualizados
+  _cacheClientes=null;
+  closeModal("modal-cliente");
+  window._editandoClienteId=null;
+  ["mc-nome","mc-rrt","mc-resp"].forEach(id=>document.getElementById(id).value="");
+  document.querySelector("#modal-cliente h3").textContent="Novo Cliente";
+  loadClientes();
+};
 window.deletarCliente=async id=>{if(!confirm("Excluir?"))return;await deleteDoc(doc(db,"clientes",id));loadClientes();};
 
-async function loadColetores(){const[snap,clSnap]=await Promise.all([getDocs(collection(db,"coletores")),getDocs(collection(db,"clientes"))]);const clMap={};clSnap.forEach(d=>clMap[d.id]=d.data().nome);const el=document.getElementById("lista-coletores");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum coletor</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>{const ca=clMap[a.clienteId]||"";const cb=clMap[b.clienteId]||"";return ca.localeCompare(cb,"pt-BR")||a.nome.localeCompare(b.nome,"pt-BR");});const grupos={};docs.forEach(col=>{const cn=clMap[col.clienteId]||"Sem cliente";if(!grupos[cn])grupos[cn]=[];grupos[cn].push(col);});Object.entries(grupos).forEach(([cname,cols])=>{const g=document.createElement("div");g.className="coletor-group";const t=document.createElement("div");t.className="coletor-group-title";t.textContent=cname;g.appendChild(t);cols.forEach(col=>{const av='<div class="avatar" style="background:#e0f2fe;color:#0369a1;font-size:11px">C</div>';const act=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarColetor(\''+col.id+'\')">Excluir</button>':'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';g.appendChild(mkLI(av,col.nome,"",act));});el.appendChild(g);});}
-window.salvarColetor=async()=>{const cId=document.getElementById("mcol-cliente").value;const n=document.getElementById("mcol-nome").value.trim();if(!cId||!n)return alert("Selecione cliente e informe nome");await addDoc(collection(db,"coletores"),{nome:n,clienteId:cId,criadoEm:serverTimestamp()});closeModal("modal-coletor");document.getElementById("mcol-nome").value="";loadColetores();};
+async function loadColetores(){const[snap,clSnap]=await Promise.all([getDocs(collection(db,"coletores")),getDocs(collection(db,"clientes"))]);const clMap={};clSnap.forEach(d=>clMap[d.id]=d.data().nome);const el=document.getElementById("lista-coletores");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum coletor</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>{const ca=clMap[a.clienteId]||"";const cb=clMap[b.clienteId]||"";return ca.localeCompare(cb,"pt-BR")||a.nome.localeCompare(b.nome,"pt-BR");});const grupos={};docs.forEach(col=>{const cn=clMap[col.clienteId]||"Sem cliente";if(!grupos[cn])grupos[cn]=[];grupos[cn].push(col);});Object.entries(grupos).forEach(([cname,cols])=>{const g=document.createElement("div");g.className="coletor-group";const t=document.createElement("div");t.className="coletor-group-title";t.textContent=cname;g.appendChild(t);cols.forEach(col=>{const av='<div class="avatar" style="background:#e0f2fe;color:#0369a1;font-size:11px">C</div>';const edit='<button class="btn small" onclick="event.stopPropagation();abrirEditarColetor(\''+col.id+'\')" style="color:#374151;border-color:#9ca3af;font-size:11px">Editar</button>';const del=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarColetor(\''+col.id+'\')">Excluir</button>':'';const act=currentRole==="master"?"<div style='display:flex;gap:6px;flex-shrink:0'>"+edit+del+"</div>":'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';g.appendChild(mkLI(av,col.nome,"",act));});el.appendChild(g);});}
+window.abrirEditarColetor=async id=>{
+  try{
+    const ds=await getDoc(doc(db,"coletores",id));
+    if(!ds.exists()){alert("Coletor não encontrado.");return;}
+    const c=ds.data();
+    window._editandoColetorId=id;
+    // populateClienteSelect popula o select de clientes e DEPOIS setamos o valor
+    populateClienteSelect("mcol-cliente");
+    // pequeno delay pro select popular
+    setTimeout(()=>{
+      const sel=document.getElementById("mcol-cliente");
+      if(sel)sel.value=c.clienteId||"";
+    },100);
+    document.getElementById("mcol-nome").value=c.nome||"";
+    document.querySelector("#modal-coletor h3").textContent="Editar Coletor";
+    document.getElementById("modal-coletor").style.display="flex"; // showModal sem repopular
+  }catch(e){console.error("abrirEditarColetor:",e);alert("Erro ao abrir edição: "+(e.message||e));}
+};
+window.salvarColetor=async()=>{
+  const cId=document.getElementById("mcol-cliente").value;
+  const n=document.getElementById("mcol-nome").value.trim();
+  if(!cId||!n)return alert("Selecione cliente e informe nome");
+  const data={nome:n,clienteId:cId};
+  if(window._editandoColetorId){
+    data.atualizadoEm=serverTimestamp();
+    await updateDoc(doc(db,"coletores",window._editandoColetorId),data);
+  } else {
+    data.criadoEm=serverTimestamp();
+    await addDoc(collection(db,"coletores"),data);
+  }
+  // Limpa cache local pra próxima busca trazer dados atualizados
+  _cacheColetores={};
+  closeModal("modal-coletor");
+  window._editandoColetorId=null;
+  document.getElementById("mcol-nome").value="";
+  document.querySelector("#modal-coletor h3").textContent="Novo Coletor";
+  loadColetores();
+};
 window.deletarColetor=async id=>{if(!confirm("Excluir?"))return;await deleteDoc(doc(db,"coletores",id));loadColetores();};
 
 async function loadUsuarios(){
@@ -2861,8 +2989,7 @@ window.iniciarComoAusente=async()=>{
 window.criarVistoria=async()=>{
   const cId=document.getElementById("nv-cliente").value;const colId=document.getElementById("nv-coletor").value;
   const nome=document.getElementById("nv-nome").value.trim();const docR=document.getElementById("nv-doc").value.trim();const tel=document.getElementById("nv-tel").value.trim();
-  const rua=document.getElementById("nv-rua").value.trim();const num=document.getElementById("nv-num").value.trim();const comp=document.getElementById("nv-comp").value.trim();
-  if(!cId||!colId)return alert("Selecione cliente e coletor");
+  const rua=document.getElementById("nv-rua").value.trim();const num=document.getElementById("nv-num").value.trim();const comp=document.getElementById("nv-comp").value.trim();if(!cId||!colId)return alert("Selecione cliente e coletor");
   if(!rua||!num)return alert("Preencha rua e numero do imóvel");
   // Usa cache local em vez de buscar do Firestore (era a causa do "Iniciar Vistoria demora").
   // Fallback para Firestore só se realmente não tiver no cache (caso raro).
@@ -2921,6 +3048,11 @@ window.criarVistoria=async()=>{
   // Inicializa identificacao vazia (sera preenchida na tela s-identificacao apos as fotos
   // no modo completo). No simplificado fica null para sempre.
   currentVistoria.identificacao=currentVistoria.identificacao||null;
+  // Marca o modo ausente em currentVistoria (já que a flag global será resetada logo abaixo)
+  if(window._iniciandoComoAusente)currentVistoria._modoAusente=true;
+  // Limpa a flag global (ela só serve pra sinalizar entre iniciarComoAusente → criarVistoria;
+  // se ficasse true, todas as próximas vistorias seriam tratadas como ausente também).
+  window._iniciandoComoAusente=false;
   // Vai direto pra tela de fotos. No completo, a tela "Identificação do Imóvel" aparece
   // APÓS as fotos (entre Vistoria e Finalização), porque o cadastrador precisa ter visto
   // o imóvel inteiro antes de preencher materiais, garagem, serviços públicos etc.
@@ -5706,6 +5838,9 @@ window.finalizarVistoria=async()=>{
         await gerarPDFCompletoPaginasContexto(pdf,currentVistoria,prest,logoPrep,PW,PH,ML,MT,MR,MB,CW,assinaturaData);
       }catch(eCompl){
         console.error("Erro ao gerar páginas de contexto do laudo completo:",eCompl);
+        // Alert visível no celular com a mensagem real do erro — pra diagnosticar bugs
+        // específicos do gerador de páginas de texto sem precisar de DevTools/F12.
+        alert("⚠️ Aviso interno do gerador do laudo completo:\n\n"+(eCompl&&(eCompl.message||eCompl.toString())||"erro desconhecido")+"\n\nO PDF continuará sendo gerado com o que conseguiu produzir + as fotos.");
         // Não aborta: ainda gera o fotográfico para o cliente não perder o trabalho
       }
     }
@@ -5733,9 +5868,10 @@ window.finalizarVistoria=async()=>{
       // Cabeçalho: enxuto no completo, completo no simplificado
       let YinicialFotos;
       if(tipoLaudo==="completo"){
-        const e=currentVistoria.endereco||{};
-        const enderecoLinha=[e.rua,e.num?"nº "+e.num:"",e.bairro,e.cidade||"São Paulo"].filter(Boolean).join(", ");
-        YinicialFotos=_pdfHeaderFotosCompleto(pdf,ML,MT,CW,enderecoLinha,currentVistoria.data||"")+2;
+        // No completo, "Local" mostra o(s) AMBIENTE(s) da página (Fachada, Cozinha, etc),
+        // não o endereço — fiel ao modelo CNRP. Múltiplos ambientes na mesma página
+        // são juntados por " / ".
+        YinicialFotos=_pdfHeaderFotosCompleto(pdf,ML,MT,CW,locais.join(" / "),currentVistoria.data||"")+2;
       } else {
         pdfHeader(pdf,ML,PW,CW,currentVistoria,locais.join(" / "),logoSrc,HDR,MT,logoPrep);
         YinicialFotos=Y0;
@@ -6118,7 +6254,10 @@ window.finalizarVistoria=async()=>{
     // Restaurar estado: sessão de vistoria deve permanecer disponível para nova tentativa
     if(_backupVistoria&&!currentVistoria)currentVistoria=_backupVistoria;
     if(_backupFotos&&Object.keys(fotosPendentes).length===0)fotosPendentes=_backupFotos;
-    alert("Erro ao gerar PDF: "+(e.message||e.code||"desconhecido")+"\n\nVocê pode tentar finalizar novamente.");
+    // Mensagem detalhada pra diagnóstico no celular (sem precisar de DevTools)
+    const detalhe=(e&&e.message)||(e&&e.code)||(e&&e.toString())||"desconhecido";
+    const stackResumido=(e&&e.stack)?e.stack.split("\n").slice(0,3).join(" | "):"";
+    alert("Erro ao gerar PDF: "+detalhe+"\n\n"+(stackResumido?"Onde: "+stackResumido+"\n\n":"")+"Você pode tentar finalizar novamente.");
   }
   finally{btn.textContent="Gerar PDF + ZIP e finalizar";btn.disabled=false;btn.style.opacity="1";}
 };
@@ -6543,7 +6682,10 @@ function _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,paginaNum,totalPaginas){
 
 // Cabeçalho enxuto das páginas de FOTOS do completo: barra "Local: ... | Data Vistoria: ..."
 // Substitui o pdfHeader cheio (com bloco do responsável) usado no simplificado.
-function _pdfHeaderFotosCompleto(pdf,ML,MT,CW,enderecoStr,dataVistoria){
+// Cabeçalho enxuto das páginas de fotos do laudo completo (barra "Local | Data").
+// "Local" aqui é o AMBIENTE da página de fotos (Fachada, Calçada, Cozinha, etc), NÃO
+// o endereço do imóvel. Igual ao simplificado.
+function _pdfHeaderFotosCompleto(pdf,ML,MT,CW,localAmbiente,dataVistoria){
   const H=8;
   pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
   pdf.rect(ML,MT,CW,H,"S");
@@ -6551,7 +6693,7 @@ function _pdfHeaderFotosCompleto(pdf,ML,MT,CW,enderecoStr,dataVistoria){
   pdf.setFont("helvetica","bold");pdf.setFontSize(9);
   pdf.text("Local: ",ML+2,MT+5.3);
   pdf.setFont("helvetica","normal");
-  const txtLocal=pdf.splitTextToSize(enderecoStr||"",CW*0.7-14)[0]||"";
+  const txtLocal=pdf.splitTextToSize(localAmbiente||"",CW*0.7-14)[0]||"";
   pdf.text(txtLocal,ML+12,MT+5.3);
   pdf.setFont("helvetica","bold");
   pdf.text("Data: ",ML+CW*0.7+2,MT+5.3);
@@ -6702,7 +6844,7 @@ function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
   garagens.forEach(t=>{const m=t.toLowerCase()===garagSel;const lab=(m?"[X] ":"[ ] ")+t;pdf.text(lab,xT,yi);xT+=pdf.getStringUnitWidth(lab)*8*0.40+2;});
   yi+=5;
   pdf.setFont("helvetica","bold");pdf.text("Cobertura:",ML+2,yi);yi+=4.5;pdf.setFont("helvetica","normal");
-  const coberOpc=["Telhas de Barro","Telhas de Fibrocimento","Laje de Concreto"];
+  const coberOpc=["Telhas de Barro","Telhas de Fibrocimento","Telha Metálica","Laje de Concreto","Forro de Madeira","Forro PVC"];
   coberOpc.forEach(opt=>{const m=coberArr.includes(opt.toLowerCase());pdf.text((m?"[X] ":"[ ] ")+opt,ML+4,yi);yi+=4.2;});
   yi+=1;
   pdf.setFont("helvetica","bold");pdf.text("Paredes:",ML+2,yi);yi+=4.5;pdf.setFont("helvetica","normal");
