@@ -403,25 +403,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
       </div>
     </div>
     <div class="card"><h2>Materiais</h2>
-      <p style="font-size:12px;color:#888;margin-bottom:10px">Marque todas as opções que se aplicam.</p>
-      <div class="field"><label style="font-weight:600">Cobertura</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:6px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Telhas de Barro" style="width:18px;height:18px">Telhas de Barro</label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Telhas de Fibrocimento" style="width:18px;height:18px">Telhas de Fibrocimento</label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Laje de Concreto" style="width:18px;height:18px">Laje de Concreto</label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Outro" style="width:18px;height:18px">Outro</label>
+      <p style="font-size:12px;color:#888;margin-bottom:10px">Marque todas as opções que se aplicam. <span style="color:#dc2626">*</span></p>
+      <div style="margin-bottom:14px">
+        <div style="font-weight:600;font-size:14px;margin-bottom:6px">Cobertura</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Telhas de Barro" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Telhas de Barro</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Telhas de Fibrocimento" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Telhas de Fibrocimento</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Laje de Concreto" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Laje de Concreto</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-cob" value="Outro" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Outro</label>
         </div>
       </div>
-      <div class="field" style="margin-top:12px"><label style="font-weight:600">Paredes</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:6px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-par" value="Blocos de Cimento" style="width:18px;height:18px">Blocos de Cimento</label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-par" value="Tijolos de Barro" style="width:18px;height:18px">Tijolos de Barro</label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-par" value="Outro" style="width:18px;height:18px">Outro</label>
+      <div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:6px">Paredes</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-par" value="Blocos de Cimento" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Blocos de Cimento</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-par" value="Tijolos de Barro" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Tijolos de Barro</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer"><input type="checkbox" class="id-mat-par" value="Outro" style="width:18px;height:18px;flex-shrink:0;margin:0;-webkit-appearance:checkbox;appearance:checkbox">Outro</label>
         </div>
       </div>
     </div>
     <button class="btn primary" onclick="confirmarIdentificacao()">Avançar para Finalização</button>
-    <p style="font-size:11px;color:#888;text-align:center;margin-top:10px">Todos os campos são opcionais. Você pode preencher depois.</p>
+    <p style="font-size:11px;color:#888;text-align:center;margin-top:10px">Os campos <strong>Cobertura</strong> e <strong>Paredes</strong> são obrigatórios. Demais campos são opcionais.</p>
   </div>
 </div>
 
@@ -826,19 +828,18 @@ const ELEMENTO_TO_COL={
 // mas NUNCA é exibido na interface ou no PDF (decisão de UX: cliente vê apenas descrições).
 const PATOLOGIAS_AL=[
   {cod:"A",nome:"Estruturas",subs:[
-    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},
-    {n:6,t:"Infiltração"},{n:7,t:"Danificado"},{n:8,t:"Armadura Exposta"},
-    {n:9,t:"Segregação"},{n:10,t:"Ninhos"},{n:11,t:"Reparos"},{n:12,t:"Remendos"}
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},
+    {n:5,t:"Infiltração"},{n:6,t:"Danificado"},{n:7,t:"Segregação"},{n:8,t:"Armadura Exposta"}
   ]},
-  {cod:"B",nome:"Alvenaria",subs:[
-    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},{n:6,t:"Danificada"}
+  {cod:"B",nome:"Paredes / Muros",subs:[
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},{n:6,t:"Danificado"}
   ]},
   {cod:"C",nome:"Teto / Forro",subs:[
-    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},
     {n:6,t:"Danificado"},{n:7,t:"Eflorescência"}
   ]},
-  {cod:"D",nome:"Reboco / Revestimento",subs:[
-    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},
+  {cod:"D",nome:"Revestimento",subs:[
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},
     {n:6,t:"Danificado"},{n:7,t:"Eflorescência"},{n:8,t:"Desplacamento"}
   ]},
   {cod:"E",nome:"Estr. Metálicas",subs:[
@@ -849,21 +850,20 @@ const PATOLOGIAS_AL=[
     {n:1,t:"Trincado"},{n:2,t:"Quebrado"},{n:3,t:"Faltando"}
   ]},
   {cod:"G",nome:"Pintura",subs:[
-    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},
-    {n:6,t:"Danificado"},{n:7,t:"Eflorescência"},{n:8,t:"Desplacamento"}
+    {n:1,t:"Fissuras"},{n:2,t:"Danificado"},{n:3,t:"Eflorescência"},{n:4,t:"Desplacamento"}
   ]},
   {cod:"H",nome:"Piso / Pavimento",subs:[
-    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Mofo"},
-    {n:6,t:"Danificado"},{n:7,t:"Recalque"},{n:8,t:"Solapamento"}
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},
+    {n:5,t:"Danificado"},{n:6,t:"Recalque"},{n:7,t:"Solapamento"}
   ]},
-  {cod:"I",nome:"Portas / Caixilhos",subs:[
-    {n:1,t:"Umidade"},{n:2,t:"Mofo"},{n:3,t:"Danificado"}
+  {cod:"I",nome:"Portas / Esquadrias",subs:[
+    {n:1,t:"Umidade"},{n:2,t:"Danificado"}
   ]},
   {cod:"J",nome:"Telhados",subs:[
-    {n:1,t:"Danificado"},{n:2,t:"Deformado"},{n:3,t:"Telhas Quebradas"},{n:4,t:"Telhas Faltando"},{n:5,t:"Madeiramento Danificado"}
+    {n:1,t:"Umidade"},{n:2,t:"Telhas Quebradas"},{n:3,t:"Telhas Faltando"},{n:4,t:"Madeira Danificada"}
   ]},
   {cod:"K",nome:"Inst. Hidráulicas",subs:[
-    {n:1,t:"Vazamento"},{n:2,t:"Danificada"}
+    {n:1,t:"Vazamento"},{n:2,t:"Danificado"},{n:3,t:"Em Reparo"}
   ]},
   {cod:"L",nome:"Outros",subs:[
     {n:1,t:"Outros"}
@@ -2975,6 +2975,9 @@ window.confirmarIdentificacao=()=>{
   if(!currentVistoria){alert("Sessão da vistoria foi perdida. Volte e reinicie.");return;}
   const cobArr=Array.from(document.querySelectorAll(".id-mat-cob:checked")).map(cb=>cb.value);
   const parArr=Array.from(document.querySelectorAll(".id-mat-par:checked")).map(cb=>cb.value);
+  // Validação: Cobertura e Paredes são obrigatórios (pelo menos 1 marcado em cada)
+  if(cobArr.length===0){alert("Selecione pelo menos uma opção em \"Cobertura\".");return;}
+  if(parArr.length===0){alert("Selecione pelo menos uma opção em \"Paredes\".");return;}
   currentVistoria.identificacao={
     servicosPublicos:{
       energia:document.getElementById("id-sv-energia").checked,
@@ -4605,13 +4608,12 @@ function salvarFotoFinal(dataUrl,patologias,combinacoes){
   // Redireciona para editor se câmera foi aberta pelo editor de fotos
   if(_efCameraMode){salvarFotoFinalEditor(dataUrl,patologias,combinacoes);return;}
   const id=Date.now().toString();const num=Object.keys(fotosPendentes).length+1;
-  const tipoLaudo=(currentVistoria&&currentVistoria.tipoLaudo)||"simplificado";
+  // Ambos os modos (simplificado e completo) usam descrição textual unificada na legenda
+  // quando há patologia. Sem patologia: usa o tipo selecionado (Vista/Detalhe/Fachada).
   let legenda=fotoAtualTipo;
-  if(combinacoes&&combinacoes.length&&tipoLaudo!=="completo"){
-    // No simplificado: legenda detalhada por combinação
+  if(combinacoes&&combinacoes.length){
     legenda=unificarLegendasCombos(combinacoes);
   }
-  // No modo completo: legenda da foto = "Vista" (sem patologia) ou "Detalhe" (com); código já está marcado na imagem.
   // Corrigir orientação EXIF (iOS) e depois comprimir
   corrigirOrientacaoFoto(dataUrl).then(dataUrlFixed=>comprimirFoto(dataUrlFixed)).then(dataUrlComp=>{
     fotosPendentes[id]={id,dataUrl:dataUrlComp,ambiente:fotoAtualAmbiente,tipo:fotoAtualTipo,legenda,numero:"Foto "+String(num).padStart(2,"0"),patologias:patologias||[],combinacoes:combinacoes||[],timestamp:new Date().toISOString()};
@@ -5701,7 +5703,7 @@ window.finalizarVistoria=async()=>{
     if(tipoLaudo==="completo"){
       setStatus("Gerando capa e anexos...");
       try{
-        await gerarPDFCompletoPaginasContexto(pdf,currentVistoria,prest,logoPrep,PW,PH,ML,MT,MR,MB,CW);
+        await gerarPDFCompletoPaginasContexto(pdf,currentVistoria,prest,logoPrep,PW,PH,ML,MT,MR,MB,CW,assinaturaData);
       }catch(eCompl){
         console.error("Erro ao gerar páginas de contexto do laudo completo:",eCompl);
         // Não aborta: ainda gera o fotográfico para o cliente não perder o trabalho
@@ -5928,6 +5930,9 @@ window.finalizarVistoria=async()=>{
       yc+=rowH;
     });
     // === PÁGINA FINAL: CONCLUSÃO + ASSINATURA ===
+    // Esta página só é gerada no SIMPLIFICADO. No completo, a conclusão em prosa
+    // e as assinaturas já estão nas páginas 4 e 5 (do gerarPDFCompletoPaginasContexto).
+    if(tipoLaudo!=="completo"){
     pdf.addPage();
     const FLPW=210,FLPH=297,FLML=12.7,FLMT=12.7,FLMR=12.7,FLMB=12.7;
     const FLCW=FLPW-FLML-FLMR;
@@ -5976,6 +5981,7 @@ window.finalizarVistoria=async()=>{
     pdf.text(currentUserData&&currentUserData.nome||"Responsavel Tecnico",sigXR+sigW/2,yf+5,{align:"center"});
     pdf.text("Responsável Técnico",sigXR+sigW/2,yf+9.5,{align:"center"});
     pdfFooter(pdf,FLPW,FLPH,FLML,FLMR,FLMB,prest);
+    } // fim do if(tipoLaudo!=="completo") — página de Manifestações Patológicas
 
     // === MODO REGERAR: apenas gerar e baixar o PDF. Sem gravar Firestore, sem ZIP,
     // sem comprovante, sem mexer em fila/localStorage. Restaura fotos originais e termina.
@@ -6563,10 +6569,28 @@ function _pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW){
 }
 
 // Quebra linha automática para texto longo (jsPDF.splitTextToSize). Devolve nova y.
+// Renderiza um bloco de texto com:
+//  - Quebra automática (splitTextToSize)
+//  - Justificação por palavra (jsPDF align:"justify" com maxWidth no pdf.text);
+//    a ÚLTIMA linha do bloco NÃO é justificada (fica alinhada à esquerda — padrão tipográfico).
+//  - Espaçamento de linha 1,5 (estilo Word). Cálculo: fontSize (pt) * 1.5 / 2.83 = mm.
+//    O parâmetro linhaH é ignorado (mantido na assinatura por compatibilidade) — usamos
+//    sempre o cálculo automático pra garantir consistência tipográfica em todas as chamadas.
 function _pdfTextoBloco(pdf,texto,x,y,maxW,fontSize,linhaH,bold){
-  pdf.setFont("helvetica",bold?"bold":"normal");pdf.setFontSize(fontSize||10);
+  const fs=fontSize||10;
+  pdf.setFont("helvetica",bold?"bold":"normal");pdf.setFontSize(fs);
+  const lH=fs*1.5/2.83; // 1,5 line-height — ignora linhaH recebido
   const linhas=pdf.splitTextToSize(texto||"",maxW);
-  linhas.forEach(l=>{pdf.text(l,x,y);y+=linhaH||5;});
+  linhas.forEach((l,i)=>{
+    const isUltima=i===linhas.length-1;
+    if(!isUltima&&linhas.length>1){
+      // Justifica linha completa expandindo espaços entre palavras
+      pdf.text(l,x,y,{maxWidth:maxW,align:"justify"});
+    } else {
+      pdf.text(l,x,y);
+    }
+    y+=lH;
+  });
   return y;
 }
 
@@ -6725,22 +6749,14 @@ function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
 // === FUNÇÃO PRINCIPAL: gera todas as páginas de TEXTO do laudo completo (1-9 do CNRP).
 // As páginas de FOTOS (anexo II propriamente dito) são geradas pelo loop do simplificado,
 // que é chamado DEPOIS desta função, usando _pdfHeaderFotosCompleto para o cabeçalho enxuto.
-async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,MR,MB,CW){
+async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,MR,MB,CW,assinaturaResp){
   // ===== PÁGINA 1 — CAPA =====
-  // Logo grande centralizado + título + cidade/data
-  if(logoPrep&&logoPrep.dataUrl){
-    try{
-      const maxW=80,maxH=60;
-      const ratio=logoPrep.w/logoPrep.h;
-      let lW=maxW,lH=lW/ratio;
-      if(lH>maxH){lH=maxH;lW=lH*ratio;}
-      pdf.addImage(logoPrep.dataUrl,"PNG",(PW-lW)/2,80,lW,lH,"","FAST");
-    }catch(e){}
-  }
+  // Capa limpa (sem logo) — apenas título "LAUDO DE VISTORIA CAUTELAR" centralizado
+  // verticalmente, com a cidade/data logo abaixo. Fiel ao modelo CNRP.
   pdf.setFont("helvetica","bold");pdf.setFontSize(20);
-  pdf.text("LAUDO DE VISTORIA CAUTELAR",PW/2,170,{align:"center"});
-  pdf.setFont("helvetica","normal");pdf.setFontSize(12);
-  pdf.text((v.endereco&&v.endereco.cidade?v.endereco.cidade:"São Paulo")+"/SP, "+(v.dataCompleta||v.data||"")+".",PW/2,185,{align:"center"});
+  pdf.text("LAUDO DE VISTORIA CAUTELAR",PW/2,PH/2,{align:"center"});
+  pdf.setFont("helvetica","normal");pdf.setFontSize(11);
+  pdf.text((v.endereco&&v.endereco.cidade?v.endereco.cidade:"São Paulo")+"/SP, "+(v.dataCompleta||v.data||"")+".",PW/2,PH/2+10,{align:"center"});
 
   // ===== PÁGINA 2 — DADOS, OBJETIVO, LOCALIZAÇÃO =====
   pdf.addPage();
@@ -6792,7 +6808,7 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
     pdf.setFont("helvetica","bold");pdf.setFontSize(9);
     pdf.text(titulo,ML+4,y);y+=4;
     pdf.setFont("helvetica","normal");
-    y=_pdfTextoBloco(pdf,"→ "+desc,ML+8,y,CW-12,9,4.2);
+    y=_pdfTextoBloco(pdf,"- "+desc,ML+8,y,CW-12,9,4.2);
     y+=1;
   });
   y+=3;
@@ -6800,12 +6816,12 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
   y=_pdfTextoBloco(pdf,"As origens das anomalias podem ter suas causas relacionadas a vários fatores, que podem ser definidos como segue:",ML+4,y,CW-4,9.5,4.5);
   y+=2;
   const itemsAnal=[
-    "► FISSURAS, TRINCAS E RACHADURAS » Prováveis fatores: variações de temperaturas.",
-    "► VARIAÇÕES DIFERENCIADAS DO TEOR DE UMIDADE DOS MATERIAIS POROSOS » Prováveis fatores: movimentações higroscópicas, atuação de sobrecargas, deformidade excessiva das estruturas de concreto armado, recalques diferenciais das fundações, alterações químicas dos materiais de construção.",
-    "► ALTERAÇÕES QUÍMICAS DOS MATERIAIS DE CONSTRUÇÃO » Prováveis fatores: deficiência na execução do encunhamento das paredes de vedação com os componentes estruturais, falta ou deficiência de vergas e contra-vergas nas portas e janelas.",
-    "► EMPOLAMENTO DO REVESTIMENTO » Prováveis fatores: deslocamento de argamassa por carbonatação.",
-    "► PINTURA DECOMPOSTA » Prováveis fatores: decomposição da pintura em paredes e forros de uma edificação se deve pela atuação da umidade excessiva na pintura.",
-    "► MANCHA DE UMIDADE » Prováveis fatores: falta e/ou falha de impermeabilização de áreas a céu aberto ou falta e/ou falha de rejuntamento ou calefação do revestimento externo, deficiência de vedação de caixilhos das janelas e por defeitos nas instalações hidro-sanitárias."
+    "• FISSURAS, TRINCAS E RACHADURAS: Prováveis fatores: variações de temperaturas.",
+    "• VARIAÇÕES DIFERENCIADAS DO TEOR DE UMIDADE DOS MATERIAIS POROSOS: Prováveis fatores: movimentações higroscópicas, atuação de sobrecargas, deformidade excessiva das estruturas de concreto armado, recalques diferenciais das fundações, alterações químicas dos materiais de construção.",
+    "• ALTERAÇÕES QUÍMICAS DOS MATERIAIS DE CONSTRUÇÃO: Prováveis fatores: deficiência na execução do encunhamento das paredes de vedação com os componentes estruturais, falta ou deficiência de vergas e contra-vergas nas portas e janelas.",
+    "• EMPOLAMENTO DO REVESTIMENTO: Prováveis fatores: deslocamento de argamassa por carbonatação.",
+    "• PINTURA DECOMPOSTA: Prováveis fatores: decomposição da pintura em paredes e forros de uma edificação se deve pela atuação da umidade excessiva na pintura.",
+    "• MANCHA DE UMIDADE: Prováveis fatores: falta e/ou falha de impermeabilização de áreas a céu aberto ou falta e/ou falha de rejuntamento ou calefação do revestimento externo, deficiência de vedação de caixilhos das janelas e por defeitos nas instalações hidro-sanitárias."
   ];
   itemsAnal.forEach(it=>{
     y=_pdfGarantirEspaco(pdf,y,12,PH,MB,MT);
@@ -6818,9 +6834,9 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
   pdf.addPage();
   y=_pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW);
   const itemsAnal2=[
-    "► DESPRENDIMENTO DE PISOS CERÂMICOS » Prováveis fatores: assentamento deficiente destas peças; quanto ao tipo de argamassa utilizada para assentamento; pela falta de espaçamento suficiente entre as peças para uma regular movimentação destas (contração e dilatação) quando da incidência de variações de temperatura bruscas; e, quando da deformação excessiva dos componentes estruturais.",
-    "► DESAGREGAÇÃO DA ARGAMASSA DO REVESTIMENTO » Prováveis fatores: oxidação da ferragem das lajes, vigas e pilares em razão da deficiência do cobrimento, da porosidade do concreto, pelas infiltrações excessivas de água, que propiciam o ataque de cloretos ou gás carbônico na ferrugem.",
-    "► DESTACAMENTO DAS PLACAS DE GESSO » Prováveis fatores: este destacamento, via de regra, é proveniente da incidência de umidade, da execução do atirantamento inadequado e pela ausência da aplicação de massa corrida e fundo preparador sobre o mesmo."
+    "• DESPRENDIMENTO DE PISOS CERÂMICOS: Prováveis fatores: assentamento deficiente destas peças; quanto ao tipo de argamassa utilizada para assentamento; pela falta de espaçamento suficiente entre as peças para uma regular movimentação destas (contração e dilatação) quando da incidência de variações de temperatura bruscas; e, quando da deformação excessiva dos componentes estruturais.",
+    "• DESAGREGAÇÃO DA ARGAMASSA DO REVESTIMENTO: Prováveis fatores: oxidação da ferragem das lajes, vigas e pilares em razão da deficiência do cobrimento, da porosidade do concreto, pelas infiltrações excessivas de água, que propiciam o ataque de cloretos ou gás carbônico na ferrugem.",
+    "• DESTACAMENTO DAS PLACAS DE GESSO: Prováveis fatores: este destacamento, via de regra, é proveniente da incidência de umidade, da execução do atirantamento inadequado e pela ausência da aplicação de massa corrida e fundo preparador sobre o mesmo."
   ];
   itemsAnal2.forEach(it=>{y=_pdfTextoBloco(pdf,it,ML+4,y,CW-4,9,4.2);y+=1.5;});
   y+=2;
@@ -6867,12 +6883,11 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
   const colSig=CW/2-6;
   const xLeft=ML+3,xRight=ML+CW/2+3;
   const sigY=y;
-  // Morador
-  if(v.assinaturaResp||window._sigRespDataUrl){
+  // Morador — assinatura coletada na tela de Finalização (passada como parâmetro)
+  if(assinaturaResp){
     try{
-      const src=v.assinaturaResp||window._sigRespDataUrl;
-      pdf.addImage(src,"PNG",xLeft+(colSig-40)/2,sigY-14,40,14,"","FAST");
-    }catch(e){}
+      pdf.addImage(assinaturaResp,"PNG",xLeft+(colSig-40)/2,sigY-14,40,14,"","FAST");
+    }catch(e){console.warn("Erro ao inserir assinatura do morador:",e);}
   }
   pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
   pdf.line(xLeft,sigY,xLeft+colSig,sigY);
