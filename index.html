@@ -837,9 +837,13 @@ const PATOLOGIAS_AL=[
   {cod:"B",nome:"Paredes / Muros",subs:[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},{n:6,t:"Danificado"}
   ]},
-  {cod:"C",nome:"Teto / Forro",subs:[
+  {cod:"C",nome:"Teto",subs:[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},
     {n:6,t:"Danificado"},{n:7,t:"Eflorescência"}
+  ]},
+  {cod:"M",nome:"Forro",subs:[
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},
+    {n:6,t:"Danificado"},{n:7,t:"Deformado"}
   ]},
   {cod:"D",nome:"Revestimento",subs:[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},
@@ -859,7 +863,10 @@ const PATOLOGIAS_AL=[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},
     {n:5,t:"Danificado"},{n:6,t:"Recalque"},{n:7,t:"Solapamento"}
   ]},
-  {cod:"I",nome:"Portas / Esquadrias",subs:[
+  {cod:"I",nome:"Portas",subs:[
+    {n:1,t:"Umidade"},{n:2,t:"Danificado"}
+  ]},
+  {cod:"N",nome:"Esquadrias",subs:[
     {n:1,t:"Umidade"},{n:2,t:"Danificado"}
   ]},
   {cod:"J",nome:"Telhados",subs:[
@@ -4364,8 +4371,8 @@ function gerarConclusaoAutomatica(){
 const _CHECKLIST_MAP={
   A:"Estruturas", E:"Estruturas",
   B:"Paredes e Muros", D:"Paredes e Muros", G:"Paredes e Muros",
-  C:"Coberturas / Tetos", J:"Coberturas / Tetos",
-  F:"Portas e Esquadrias", I:"Portas e Esquadrias",
+  C:"Coberturas / Tetos", M:"Coberturas / Tetos", J:"Coberturas / Tetos",
+  F:"Portas e Esquadrias", I:"Portas e Esquadrias", N:"Portas e Esquadrias",
   H:"Pisos e Calçamentos",
   K:"Equipamentos", L:"Equipamentos"
 };
@@ -4836,7 +4843,11 @@ function renderFinalizacao(){
 }
 window.limparAssinatura=()=>{if(!sigCtx)return;sigCtx.fillStyle="#fff";sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);assinaturaData=null;document.getElementById("sig-confirmado").style.display="none";document.getElementById("btn-finalizar").disabled=true;document.getElementById("btn-finalizar").style.opacity=".4";};
 window.salvarAssinatura=()=>{assinaturaData=sigCanvas.toDataURL("image/png");document.getElementById("sig-confirmado").style.display="block";document.getElementById("btn-finalizar").disabled=false;document.getElementById("btn-finalizar").style.opacity="1";};
-window.confirmarSairVistoria=()=>{if(confirm("Sair? Dados nao salvos serao perdidos."))goTo("s-dash");};
+window.confirmarSairVistoria=()=>{
+  // Se a vistoria já foi finalizada (banner de sucesso ativo), só vai pro dash sem alerta
+  if(window._ultimaVistoriaFinalizada){goTo("s-dash");return;}
+  if(confirm("Sair? Dados nao salvos serao perdidos."))goTo("s-dash");
+};
 
 // ===== AÇÕES DO BANNER PÓS-FINALIZAÇÃO =====
 window.acaoGerarPDFNovamente=async()=>{
@@ -5935,6 +5946,11 @@ window.finalizarVistoria=async()=>{
       pdfFooter(pdf,PW,PH,ML,MR,MB,prest);
     }
 
+    // === PÁGINA "IDENTIFICAÇÃO DE PATOLOGIAS" (tabela horizontal) ===
+    // Só é gerada no SIMPLIFICADO. No laudo completo essa tabela já aparece no
+    // Anexo I (LISTA DE VERIFICAÇÃO Sim/Não), tornando esta página redundante.
+    // O comprovante continua tendo essa tabela (mantida em gerarComprovanteBlob).
+    if(tipoLaudo!=="completo"){
     // === PAGINA CHECKLIST — página própria com constantes locais ===
     pdf.addPage();
     const CKH=297,CKML=12.7,CKMR=12.7,CKMB=12.7;
@@ -6065,6 +6081,7 @@ window.finalizarVistoria=async()=>{
       });
       yc+=rowH;
     });
+    } // fim do if(tipoLaudo!=="completo") — página de Identificação de Patologias
     // === PÁGINA FINAL: CONCLUSÃO + ASSINATURA ===
     // Esta página só é gerada no SIMPLIFICADO. No completo, a conclusão em prosa
     // e as assinaturas já estão nas páginas 4 e 5 (do gerarPDFCompletoPaginasContexto).
@@ -6166,6 +6183,15 @@ window.finalizarVistoria=async()=>{
     setStatus("Gerando PDF...");
     await yieldThread();
     await shareOrDownload(pdf.output("blob"),nomeBase+".pdf","application/pdf");
+    // === CHECKPOINT DE SEGURANÇA: PDF saiu com sucesso ===
+    // A partir daqui, mesmo que algo dê errado adiante (ZIP, Firestore, etc), o usuário
+    // não pode "perder" a vistoria. Já marca _ultimaVistoriaFinalizada com o que tem,
+    // pra renderFinalizacao mostrar o banner de sucesso com botões Gerar Novamente / Comprovante.
+    window._ultimaVistoriaFinalizada={
+      id:null, // será atualizado depois quando o Firestore gravar
+      data:{...vDoc,id:null},
+      criadoEmTs:Date.now()
+    };
     // Restaurar fotos originais (qualidade máxima) ANTES do ZIP — a recompressão só serve para o PDF
     fotosPendentes=_backupFotos;
 
@@ -6238,13 +6264,19 @@ window.finalizarVistoria=async()=>{
     }
     // Em vez de limpar tudo e voltar pra Nova Vistoria, mantém os dados desta vistoria
     // disponíveis para o usuário acionar "Gerar PDF Novamente" e/ou "Enviar Comprovante".
-    // Os dados ficam guardados num objeto temporário (window._ultimaVistoriaFinalizada) que
-    // a tela de Finalização mostra como banner de sucesso com botões de ação.
-    window._ultimaVistoriaFinalizada={
-      id:(vRef&&vRef.id)||null,
-      data:{...vDoc,id:(vRef&&vRef.id)||null},
-      criadoEmTs:Date.now()
-    };
+    // ATUALIZA o objeto que já tinha sido setado no checkpoint após o PDF — agora com o ID real.
+    if(window._ultimaVistoriaFinalizada){
+      window._ultimaVistoriaFinalizada.id=(vRef&&vRef.id)||null;
+      if(window._ultimaVistoriaFinalizada.data){
+        window._ultimaVistoriaFinalizada.data.id=(vRef&&vRef.id)||null;
+      }
+    } else {
+      window._ultimaVistoriaFinalizada={
+        id:(vRef&&vRef.id)||null,
+        data:{...vDoc,id:(vRef&&vRef.id)||null},
+        criadoEmTs:Date.now()
+      };
+    }
     currentVistoria=null;fotosPendentes={};assinaturaData=null;ambientesExtras=[];
     localApagarRascunho(); // vistoria finalizada: rascunho não é mais necessário
     // Recarrega a tela de Finalização para mostrar o estado de sucesso com botões
@@ -6257,9 +6289,21 @@ window.finalizarVistoria=async()=>{
     // Mensagem detalhada pra diagnóstico no celular (sem precisar de DevTools)
     const detalhe=(e&&e.message)||(e&&e.code)||(e&&e.toString())||"desconhecido";
     const stackResumido=(e&&e.stack)?e.stack.split("\n").slice(0,3).join(" | "):"";
-    alert("Erro ao gerar PDF: "+detalhe+"\n\n"+(stackResumido?"Onde: "+stackResumido+"\n\n":"")+"Você pode tentar finalizar novamente.");
+    // Se o PDF já tinha sido gerado antes do erro, mostra banner de sucesso parcial
+    // pra usuário não perder a vistoria.
+    if(window._ultimaVistoriaFinalizada){
+      alert("Aviso: o PDF foi baixado mas algo falhou depois.\n\n"+detalhe+"\n\nA vistoria está na tela de sucesso — você pode gerar novamente ou enviar o comprovante.");
+    } else {
+      alert("Erro ao gerar PDF: "+detalhe+"\n\n"+(stackResumido?"Onde: "+stackResumido+"\n\n":"")+"Você pode tentar finalizar novamente.");
+    }
   }
-  finally{btn.textContent="Gerar PDF + ZIP e finalizar";btn.disabled=false;btn.style.opacity="1";}
+  finally{
+    // SEMPRE recarrega a tela de Finalização: se _ultimaVistoriaFinalizada estiver setada,
+    // mostra o banner de sucesso (botões Gerar Novamente / Comprovante / Nova Vistoria);
+    // se não, mostra os campos normais pra nova tentativa.
+    try{renderFinalizacao();}catch(eRender){console.warn("renderFinalizacao no finally:",eRender);}
+    btn.textContent="Gerar PDF + ZIP e finalizar";btn.disabled=false;btn.style.opacity="1";
+  }
 };
 
 // ===== FLUXO RÁPIDO: AUSENTE PASSÍVEL DE RETORNO =====
@@ -6671,13 +6715,32 @@ function pdfFooter(pdf,PW,PH,ML,MR,MB,p){
 // Rodapé padrão das páginas de texto do completo (com prestador atual centralizado e nº página)
 function _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,paginaNum,totalPaginas){
   const footTop=PH-MB-3;
+  const p=prest||{};
+  // Caixa do rodapé um pouco mais alta pra acomodar 3 linhas (nome, endereço, CNPJ+email)
+  const ROD_H=14;
   pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
-  pdf.rect(ML,footTop-2,PW-ML-MR,8,"S");
+  pdf.rect(ML,footTop-2,PW-ML-MR,ROD_H,"S");
+  // Linha 1: Nome do prestador (negrito, centralizado)
   pdf.setFont("helvetica","bold");pdf.setFontSize(9);
-  const nomeEmpresa=(prest&&prest.nome)||"CTB ENGENHARIA CAUTELAR";
-  pdf.text(nomeEmpresa,ML+3,footTop+3);
-  pdf.setFont("helvetica","normal");pdf.setFontSize(9);
-  pdf.text("pág. "+paginaNum,PW-MR-3,footTop+3,{align:"right"});
+  const nomeEmpresa=p.nome||"CTB ENGENHARIA CAUTELAR";
+  pdf.text(nomeEmpresa,PW/2,footTop+2,{align:"center"});
+  // Linha 2: Endereço (centralizado, normal)
+  pdf.setFont("helvetica","normal");pdf.setFontSize(8);
+  if(p.endereco){
+    // truncar endereço pra caber em 1 linha
+    const endLinhas=pdf.splitTextToSize(p.endereco,PW-ML-MR-6);
+    pdf.text(endLinhas[0]||"",PW/2,footTop+6,{align:"center"});
+  }
+  // Linha 3: CNPJ + e-mail (centralizado)
+  const linha3=[];
+  if(p.cnpj)linha3.push("CNPJ: "+p.cnpj);
+  if(p.email)linha3.push(p.email);
+  if(linha3.length){
+    pdf.text(linha3.join(" | "),PW/2,footTop+9.5,{align:"center"});
+  }
+  // Número da página: canto direito, mesma posição da linha 1
+  pdf.setFont("helvetica","normal");pdf.setFontSize(8);
+  pdf.text("pág. "+paginaNum,PW-MR-3,footTop+2,{align:"right"});
 }
 
 // Cabeçalho enxuto das páginas de FOTOS do completo: barra "Local: ... | Data Vistoria: ..."
@@ -6893,12 +6956,15 @@ function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
 // que é chamado DEPOIS desta função, usando _pdfHeaderFotosCompleto para o cabeçalho enxuto.
 async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,MR,MB,CW,assinaturaResp){
   // ===== PÁGINA 1 — CAPA =====
-  // Capa limpa (sem logo) — apenas título "LAUDO DE VISTORIA CAUTELAR" centralizado
-  // verticalmente, com a cidade/data logo abaixo. Fiel ao modelo CNRP.
-  pdf.setFont("helvetica","bold");pdf.setFontSize(20);
-  pdf.text("LAUDO DE VISTORIA CAUTELAR",PW/2,PH/2,{align:"center"});
-  pdf.setFont("helvetica","normal");pdf.setFontSize(11);
-  pdf.text((v.endereco&&v.endereco.cidade?v.endereco.cidade:"São Paulo")+"/SP, "+(v.dataCompleta||v.data||"")+".",PW/2,PH/2+10,{align:"center"});
+  // Capa limpa (sem logo) — título "LAUDO DE VISTORIA CAUTELAR" + cidade/data
+  // posicionados na parte INFERIOR DIREITA da página (modelo CNRP).
+  // Y aprox 88% da altura, alinhado à direita com margem padrão.
+  const cTituloY=PH*0.88;
+  const cMargRight=ML+CW-2;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(16);
+  pdf.text("LAUDO DE VISTORIA CAUTELAR",cMargRight,cTituloY,{align:"right"});
+  pdf.setFont("helvetica","normal");pdf.setFontSize(10);
+  pdf.text((v.endereco&&v.endereco.cidade?v.endereco.cidade:"São Paulo")+"/SP, "+(v.dataCompleta||v.data||"")+".",cMargRight,cTituloY+7,{align:"right"});
 
   // ===== PÁGINA 2 — DADOS, OBJETIVO, LOCALIZAÇÃO =====
   pdf.addPage();
@@ -6980,26 +7046,26 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
     "• DESAGREGAÇÃO DA ARGAMASSA DO REVESTIMENTO: Prováveis fatores: oxidação da ferragem das lajes, vigas e pilares em razão da deficiência do cobrimento, da porosidade do concreto, pelas infiltrações excessivas de água, que propiciam o ataque de cloretos ou gás carbônico na ferrugem.",
     "• DESTACAMENTO DAS PLACAS DE GESSO: Prováveis fatores: este destacamento, via de regra, é proveniente da incidência de umidade, da execução do atirantamento inadequado e pela ausência da aplicação de massa corrida e fundo preparador sobre o mesmo."
   ];
-  itemsAnal2.forEach(it=>{y=_pdfTextoBloco(pdf,it,ML+4,y,CW-4,9,4.2);y+=1.5;});
-  y+=2;
+  itemsAnal2.forEach(it=>{y=_pdfTextoBloco(pdf,it,ML+4,y,CW-4,9.5,4.5);y+=4;});
+  y+=8;
   pdf.setFont("helvetica","bold");pdf.setFontSize(11);
-  pdf.text("6. LISTA DE VERIFICAÇÃO DOS ELEMENTOS CONSTRUTIVOS",ML,y);y+=6;
+  pdf.text("6. LISTA DE VERIFICAÇÃO DOS ELEMENTOS CONSTRUTIVOS",ML,y);y+=8;
   y=_pdfTextoBloco(pdf,"Para auxiliar a anotação das não conformidades foi utilizada uma lista de verificação (check-list), com base nas orientações da Norma Nacional de Inspeção Predial, levando em consideração a tipologia, padrão e as manifestações patológicas esperadas.",ML+4,y,CW-4,9.5,4.5);
-  y+=3;
+  y+=10;
   // AVALIAÇÃO
-  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("7. AVALIAÇÃO DO IMÓVEL",ML,y);y+=6;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("7. AVALIAÇÃO DO IMÓVEL",ML,y);y+=8;
   y=_pdfTextoBloco(pdf,"A manutenção é avaliada como: CONFORME, NÃO CONFORME ou NÃO SE APLICA.",ML+4,y,CW-4,9.5,4.5);
-  y+=1;
+  y+=3;
   y=_pdfTextoBloco(pdf,"Para sua classificação, leva-se em conta que a maioria das irregularidades encontradas são falhas, com grau de manutenção crítica, média ou mínima, ou seja, referem-se à necessidade de manutenção. A ausência de manutenção é uma das razões para a situação crítica, pois através de atividades preventivas de manutenção os riscos oferecidos são minimizados.",ML+4,y,CW-4,9.5,4.5);
-  y+=2;
+  y+=5;
   // Regra: Estado=Bom → CONFORME, demais → NÃO CONFORME
   const estado=(v.estado||"").toLowerCase();
   const classif=estado==="bom"?"CONFORME":"NÃO CONFORME";
   pdf.setFont("helvetica","bold");pdf.setFontSize(10);
-  pdf.text("Portanto classificamos imóvel como: "+classif,ML+4,y);y+=8;
+  pdf.text("Portanto classificamos imóvel como: "+classif,ML+4,y);y+=12;
   // CONCLUSÃO (gerada automaticamente)
   y=_pdfGarantirEspaco(pdf,y,20,PH,MB,MT);
-  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("8. CONCLUSÃO:",ML,y);y+=6;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("8. CONCLUSÃO:",ML,y);y+=8;
   const conclusao=gerarConclusaoAutomatica();
   y=_pdfTextoBloco(pdf,conclusao,ML+4,y,CW-4,10,5);
   _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,4,"X");
@@ -7007,20 +7073,20 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
   // ===== PÁGINA 5 — ENCERRAMENTO + ASSINATURAS =====
   pdf.addPage();
   y=_pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW);
-  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("9. ENCERRAMENTO:",ML,y);y+=6;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("9. ENCERRAMENTO:",ML,y);y+=8;
   y=_pdfTextoBloco(pdf,"O presente Laudo de Vistoria Cautelar possui numeração impressa em suas folhas e somente no anverso e esta última datada e assinada.",ML+4,y,CW-4,10,5);
-  y+=3;
+  y+=6;
   const nomeEmpresaEnc=(prest&&prest.nome)||"CTB ENGENHARIA CAUTELAR";
   y=_pdfTextoBloco(pdf,"Finalmente, declaramos que a "+nomeEmpresaEnc+" não tem nenhum vínculo com os proprietários dos bens inspecionados, não tendo, portanto, interesse pessoal ou financeiro nas recomendações ou valores resultantes deste laudo.",ML+4,y,CW-4,10,5);
-  y+=3;
+  y+=10; // espaço maior entre "resultantes deste laudo" e "Fazem parte..."
   y=_pdfTextoBloco(pdf,"Fazem parte deste laudo os seguintes anexos:",ML+4,y,CW-4,10,5);
-  y+=2;
+  y+=4;
   y=_pdfTextoBloco(pdf,"ANEXO I – Identificação do imóvel",ML+8,y,CW-8,10,5);
   y=_pdfTextoBloco(pdf,"ANEXO II – Relatório fotográfico do imóvel vistoriado",ML+8,y,CW-8,10,5);
-  y+=5;
+  y+=15; // espaço grande antes da data — distribui melhor o conteúdo na página
   pdf.setFont("helvetica","normal");pdf.setFontSize(10);
   pdf.text((v.endereco&&v.endereco.cidade?v.endereco.cidade:"São Paulo")+", "+(v.dataCompleta||v.data||"")+".",ML+4,y);
-  y+=18;
+  y+=28; // espaço grande pra assinatura morador (deixar a linha bem abaixo da data)
   // ASSINATURAS — esquerda: morador (assinatura na hora), direita: técnico (linha em branco para certificado digital)
   const colSig=CW/2-6;
   const xLeft=ML+3,xRight=ML+CW/2+3;
