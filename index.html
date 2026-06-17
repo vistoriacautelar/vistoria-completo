@@ -3374,6 +3374,12 @@ function iniciarGPS(){
   const statusEl=document.getElementById("gps-status");
   navigator.geolocation.watchPosition(async pos=>{
     gpsAtual={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:Math.round(pos.coords.accuracy)};
+    // Atualiza coordenadas da vistoria pra usar no mapa do PDF.
+    // Só sobrescreve se ainda não há GPS gravado (preserva o do "Detectar bairro"
+    // que foi feito ANTES da vistoria começar — provavelmente é o endereço correto).
+    if(currentVistoria&&!currentVistoria.gps){
+      currentVistoria.gps={lat:gpsAtual.lat,lon:gpsAtual.lng};
+    }
     if(statusEl)statusEl.textContent="GPS: "+gpsAtual.lat.toFixed(5)+"S "+Math.abs(gpsAtual.lng).toFixed(5)+"W";
     try{
       const r=await fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat="+gpsAtual.lat+"&lon="+gpsAtual.lng+"&addressdetails=1");
@@ -4483,26 +4489,17 @@ function gerarConclusaoAutomatica(){
 }
 
 // Mapeamento (categoria interna A-N → linha do checklist do Anexo I).
-// Cada categoria de patologia tem sua PRÓPRIA linha — totaliza 14 linhas detalhadas.
-// O nome da linha é o mesmo nome da categoria no PATOLOGIAS_AL (com pequenas variações
-// pra leitura: "Estruturas" em vez de só "Estrutura" no plural quando for elemento construtivo).
+// Usado para preencher automaticamente a tabela "Especificação / Danos".
+// Agrupa as 14 categorias de patologia em 6 elementos construtivos padrão.
 const _CHECKLIST_MAP={
-  A:"Estruturas",
-  B:"Paredes",
-  C:"Tetos",
-  M:"Forros",
-  D:"Revestimentos",
-  E:"Estruturas Metálicas",
-  F:"Vidros",
-  G:"Pintura",
-  H:"Pisos",
-  I:"Portas",
-  N:"Esquadrias",
-  J:"Telhados",
-  K:"Instalações Hidráulicas",
-  L:"Outros"
+  A:"Estruturas", E:"Estruturas",
+  B:"Paredes e Muros", D:"Paredes e Muros", G:"Paredes e Muros",
+  C:"Coberturas / Tetos", M:"Coberturas / Tetos", J:"Coberturas / Tetos",
+  F:"Portas e Esquadrias", I:"Portas e Esquadrias", N:"Portas e Esquadrias",
+  H:"Pisos e Calçamentos",
+  K:"Equipamentos", L:"Equipamentos"
 };
-const _CHECKLIST_LINHAS=["Estruturas","Paredes","Tetos","Forros","Revestimentos","Estruturas Metálicas","Vidros","Pintura","Pisos","Portas","Esquadrias","Telhados","Instalações Hidráulicas","Outros"];
+const _CHECKLIST_LINHAS=["Estruturas","Paredes e Muros","Coberturas / Tetos","Portas e Esquadrias","Pisos e Calçamentos","Equipamentos (antenas parabólicas, etc.)"];
 
 // Retorna objeto {linha → boolean} com base nas patologias anotadas em todas as fotos.
 // "Equipamentos (antenas parabólicas, etc.)" no map é tratada via prefixo "Equipamentos".
@@ -6336,7 +6333,7 @@ window.finalizarVistoria=async()=>{
     }
     // Salvar Firebase (sem fotos — fotos vão para IndexedDB local-only) + download
     // OBS: assinaturaResp gravada no Firestore (necessária para regerar comprovante depois).
-    const vDoc={clienteId:currentVistoria.clienteId,coletorId:currentVistoria.coletorId,clienteNome:currentVistoria.clienteNome,clienteRRT:currentVistoria.clienteRRT,coletorNome:currentVistoria.coletorNome,responsavel:currentVistoria.responsavel,endereco:currentVistoria.endereco,ocupacao:currentVistoria.ocupacao,tipo:currentVistoria.tipo,tipoLaudo:currentVistoria.tipoLaudo||"simplificado",estado:currentVistoria.estado,idade:currentVistoria.idade,data:currentVistoria.data,dataCompleta:currentVistoria.dataCompleta,userId:currentUser.uid,checklist:currentVistoria.checklist,ambientesExtras:ambientesExtras||[],observacoes:currentVistoria.observacoes,observacoesConclusao:currentVistoria.observacoesConclusao||"",identificacao:currentVistoria.identificacao||null,totalFotos:Object.keys(fotosPendentes).length,status:currentVistoria.statusVistoria||"concluida",pendente_retorno:isPendente,visitas:currentVistoria.visitas||1,criadoEm:serverTimestamp(),assinaturaResp:assinaturaData||null};
+    const vDoc={clienteId:currentVistoria.clienteId,coletorId:currentVistoria.coletorId,clienteNome:currentVistoria.clienteNome,clienteRRT:currentVistoria.clienteRRT,coletorNome:currentVistoria.coletorNome,responsavel:currentVistoria.responsavel,endereco:currentVistoria.endereco,gps:currentVistoria.gps||null,ocupacao:currentVistoria.ocupacao,tipo:currentVistoria.tipo,tipoLaudo:currentVistoria.tipoLaudo||"simplificado",estado:currentVistoria.estado,idade:currentVistoria.idade,data:currentVistoria.data,dataCompleta:currentVistoria.dataCompleta,userId:currentUser.uid,checklist:currentVistoria.checklist,ambientesExtras:ambientesExtras||[],observacoes:currentVistoria.observacoes,observacoesConclusao:currentVistoria.observacoesConclusao||"",identificacao:currentVistoria.identificacao||null,totalFotos:Object.keys(fotosPendentes).length,status:currentVistoria.statusVistoria||"concluida",pendente_retorno:isPendente,visitas:currentVistoria.visitas||1,criadoEm:serverTimestamp(),assinaturaResp:assinaturaData||null};
     // data_finalizacao: gravada apenas quando a vistoria está sendo finalizada (não pendente).
     // Esse campo serve à coluna "Data da vistoria" da planilha do cliente e nunca deve ser
     // sobrescrito em edições posteriores — preserva o momento real da finalização.
@@ -6995,33 +6992,92 @@ function _pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW){
 //  - Espaçamento de linha 1,5 (estilo Word). Cálculo: fontSize (pt) * 1.5 / 2.83 = mm.
 //    O parâmetro linhaH é ignorado (mantido na assinatura por compatibilidade) — usamos
 //    sempre o cálculo automático pra garantir consistência tipográfica em todas as chamadas.
-// === MAPA DA LOCALIZAÇÃO (OpenStreetMap) ===
-// Baixa uma imagem estática centrada nas coordenadas dadas e converte pra base64.
-// Usa o serviço staticmap.openstreetmap.de (mantido pela comunidade alemã, grátis e sem
-// chave). Como o servidor pode estar fora do ar ou demorar, há timeout de 8s e fallback
-// silencioso (se falhar, o PDF segue com o quadro vazio "Mapa não disponível").
-// Retorna {dataUrl, w, h} ou null.
+// === MAPA DA LOCALIZAÇÃO (OpenStreetMap tiles) ===
+// Baixa 3x3 tiles do OpenStreetMap centrados nas coordenadas dadas, compõe em canvas
+// e adiciona um marcador vermelho na posição exata. Retorna dataUrl PNG ou null.
+//
+// Por que tiles em vez de "static map service"?
+// - Os serviços de static map (staticmap.openstreetmap.de) são lentos, frequentemente
+//   fora do ar e bloqueiam CORS em mobile.
+// - Os TILES (tile.openstreetmap.org) são a infra oficial do OSM, com CORS aberto,
+//   altamente disponíveis e usados por milhões de apps todo dia.
+// - Composição é simples: convertemos lat/lon em índices de tile, baixamos 9 tiles
+//   adjacentes (3x3), desenhamos no canvas, plotamos o marcador no centro.
 async function baixarMapaOSM(lat,lon,larguraPx,alturaPx){
   if(!lat||!lon)return null;
-  // staticmap.openstreetmap.de aceita zoom (1-19), center (lat,lon), size (WxH),
-  // markers (lat,lon,red-pushpin). Limita pixels a 1280 (limite do serviço).
-  const w=Math.min(larguraPx||640,1280);
-  const h=Math.min(alturaPx||400,1280);
-  const zoom=16; // bom equilíbrio entre detalhe da rua e contexto do bairro
-  const url=`https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=${zoom}&size=${w}x${h}&markers=${lat},${lon},red-pushpin`;
+  const ZOOM=17; // bom detalhamento de rua sem perder contexto do bairro
+  // Conversão lat/lon → tile XY (fórmula padrão do OSM Slippy Map)
+  // https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+  const n=Math.pow(2,ZOOM);
+  const lonRad=lon*Math.PI/180;
+  const latRad=lat*Math.PI/180;
+  const xTileF=((lon+180)/360)*n;
+  const yTileF=(1-Math.log(Math.tan(latRad)+1/Math.cos(latRad))/Math.PI)/2*n;
+  const xTile=Math.floor(xTileF);
+  const yTile=Math.floor(yTileF);
+  // Posição do ponto exato dentro do tile central (0-255 px)
+  const xPx=Math.floor((xTileF-xTile)*256);
+  const yPx=Math.floor((yTileF-yTile)*256);
+  // Vamos baixar 3x3 tiles = 768x768 px. Canvas final corta no centro com o
+  // tamanho desejado, mantendo o marcador centralizado.
+  const TILE=256;
+  const GRID=3;
+  const canvasFinal=document.createElement("canvas");
+  canvasFinal.width=GRID*TILE;
+  canvasFinal.height=GRID*TILE;
+  const ctx=canvasFinal.getContext("2d");
+  ctx.fillStyle="#e5e7eb";ctx.fillRect(0,0,canvasFinal.width,canvasFinal.height);
+  // Baixa todos os tiles em paralelo
+  const promessas=[];
+  for(let dx=-1;dx<=1;dx++){
+    for(let dy=-1;dy<=1;dy++){
+      const tx=xTile+dx,ty=yTile+dy;
+      const px=(dx+1)*TILE,py=(dy+1)*TILE;
+      // Tile servers alternados (a, b, c) — distribuição de carga padrão OSM
+      const sub=["a","b","c"][Math.abs(tx+ty)%3];
+      const url=`https://${sub}.tile.openstreetmap.org/${ZOOM}/${tx}/${ty}.png`;
+      promessas.push(new Promise(res=>{
+        const img=new Image();
+        img.crossOrigin="anonymous";
+        const timer=setTimeout(()=>{img.src="";res();},8000);
+        img.onload=()=>{clearTimeout(timer);ctx.drawImage(img,px,py);res();};
+        img.onerror=()=>{clearTimeout(timer);res();}; // tile falhou, segue com fundo cinza
+        img.src=url;
+      }));
+    }
+  }
   try{
-    const ctrl=new AbortController();
-    const timer=setTimeout(()=>ctrl.abort(),8000);
-    const resp=await fetch(url,{signal:ctrl.signal});
-    clearTimeout(timer);
-    if(!resp.ok)return null;
-    const blob=await resp.blob();
-    const dataUrl=await new Promise((res,rej)=>{
-      const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);
-    });
-    return {dataUrl,w,h};
+    await Promise.all(promessas);
+  }catch(e){console.warn("Erro nos tiles:",e);}
+  // Marcador vermelho no centro do canvas — posição = (1 tile + xPx, 1 tile + yPx)
+  const cx=TILE+xPx,cy=TILE+yPx;
+  // Sombra
+  ctx.beginPath();ctx.ellipse(cx,cy+2,9,4,0,0,Math.PI*2);
+  ctx.fillStyle="rgba(0,0,0,0.3)";ctx.fill();
+  // Pino vermelho — formato de gota com base no marcador
+  ctx.beginPath();
+  ctx.arc(cx,cy-12,9,0,Math.PI*2);
+  ctx.fillStyle="#dc2626";ctx.fill();
+  ctx.strokeStyle="#7f1d1d";ctx.lineWidth=1.5;ctx.stroke();
+  // Triângulo de baixo (cauda do pino)
+  ctx.beginPath();
+  ctx.moveTo(cx-6,cy-8);ctx.lineTo(cx+6,cy-8);ctx.lineTo(cx,cy);ctx.closePath();
+  ctx.fillStyle="#dc2626";ctx.fill();ctx.stroke();
+  // Bolinha branca no centro do pino (estilo Google Maps)
+  ctx.beginPath();
+  ctx.arc(cx,cy-12,3.5,0,Math.PI*2);
+  ctx.fillStyle="#fff";ctx.fill();
+  // Crédito OSM no canto inferior direito (obrigatório por tile policy do OSM)
+  ctx.fillStyle="rgba(255,255,255,0.85)";
+  ctx.fillRect(canvasFinal.width-120,canvasFinal.height-14,118,12);
+  ctx.fillStyle="#374151";ctx.font="9px sans-serif";
+  ctx.fillText("© OpenStreetMap",canvasFinal.width-117,canvasFinal.height-4);
+  try{
+    const dataUrl=canvasFinal.toDataURL("image/png");
+    return {dataUrl,w:canvasFinal.width,h:canvasFinal.height};
   }catch(e){
-    console.warn("baixarMapaOSM:",e);
+    // canvas.toDataURL pode falhar se tiles vieram tainted (CORS) — fallback null
+    console.warn("toDataURL falhou (canvas tainted):",e);
     return null;
   }
 }
@@ -7267,23 +7323,39 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
   const mapaW=CW-8,mapaH=80;
   pdf.setDrawColor(150,150,150);pdf.setLineWidth(0.3);
   pdf.rect(ML+4,y,mapaW,mapaH,"S");
-  // Se a vistoria tem coordenadas GPS (capturadas pelo "Detectar Bairro"), insere o mapa.
-  // Senão, deixa o quadro vazio com aviso pra o usuário inserir manualmente.
+  // === ESTRATÉGIA DE COORDENADAS PRO MAPA ===
+  // 1ª escolha: GPS do "Detectar bairro" (mais confiável — é o endereço do imóvel)
+  // 2ª escolha: GPS gravado durante a vistoria (capturado pelo iniciarGPS)
+  // 3ª escolha: nada — mostra quadro com aviso "Sem GPS"
   let mapaInserido=false;
+  let mensagemErroMapa="";
+  let coords=null;
   if(v.gps&&v.gps.lat&&v.gps.lon){
+    coords={lat:v.gps.lat,lon:v.gps.lon};
+  } else if(v.gpsFoto&&v.gpsFoto.lat&&v.gpsFoto.lon){
+    coords={lat:v.gpsFoto.lat,lon:v.gpsFoto.lon};
+  }
+  if(coords){
     try{
-      // Pixel ratio razoável pra qualidade no PDF (1mm ≈ 3.78px em 96dpi).
-      // Solicita 800x300px pro mapa (~2x o tamanho exibido, mantém nitidez ao imprimir).
-      const mapa=await baixarMapaOSM(v.gps.lat,v.gps.lon,800,300);
+      const mapa=await baixarMapaOSM(coords.lat,coords.lon,mapaW,mapaH);
       if(mapa&&mapa.dataUrl){
         pdf.addImage(mapa.dataUrl,"PNG",ML+4,y,mapaW,mapaH,"","FAST");
         mapaInserido=true;
+      } else {
+        mensagemErroMapa="Mapa não pôde ser carregado (sem internet ou servidor OSM indisponível)";
       }
-    }catch(e){console.warn("Erro ao inserir mapa:",e);}
+    }catch(e){
+      console.warn("Erro ao inserir mapa:",e);
+      mensagemErroMapa="Erro ao gerar mapa: "+(e.message||e);
+    }
+  } else {
+    mensagemErroMapa="Coordenadas GPS não disponíveis — use o botão \"Detectar bairro\" ao criar a vistoria";
   }
   if(!mapaInserido){
     pdf.setFontSize(9);pdf.setTextColor(150,150,150);
-    pdf.text("(Mapa de localização — anexar manualmente se necessário)",ML+4+mapaW/2,y+mapaH/2,{align:"center"});
+    const linhasErro=pdf.splitTextToSize(mensagemErroMapa,mapaW-10);
+    let yErro=y+mapaH/2-((linhasErro.length-1)*2);
+    linhasErro.forEach(l=>{pdf.text(l,ML+4+mapaW/2,yErro,{align:"center"});yErro+=4.5;});
     pdf.setTextColor(0,0,0);
   }
   _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,2,"X");
