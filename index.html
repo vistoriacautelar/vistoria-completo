@@ -335,6 +335,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
         <div style="flex:1"><label>Numero *</label><input type="text" id="nv-num" placeholder="123" inputmode="numeric"></div>
         <button class="btn small" onclick="document.getElementById('nv-num').value='SN'" style="margin-bottom:0;white-space:nowrap">SN</button>
       </div>
+      <div class="field" style="display:flex;gap:8px;align-items:flex-end">
+        <div style="flex:1"><label>Bairro</label><input type="text" id="nv-bairro" placeholder="Bairro" oninput="capitalizarInput(this)"></div>
+        <button class="btn small" id="nv-detectar-bairro-btn" onclick="detectarBairroPorGPS()" style="margin-bottom:0;white-space:nowrap;background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd">📍 Detectar</button>
+      </div>
       <div class="field"><label>Complemento</label><input type="text" id="nv-comp" placeholder="Casa 1, Ap 23..." oninput="capitalizarInput(this)"></div>
     </div>
     <div class="card"><h2>Tipo de laudo</h2>
@@ -2927,7 +2931,7 @@ async function loadNovVistoriaForm(){
     document.getElementById("nv-coletor").innerHTML='<option value="">Selecione o cliente primeiro...</option>';
   }
   // Campos pessoais: limpar mas oferecer reaproveitamento
-  ["nv-nome","nv-doc","nv-tel","nv-num","nv-comp"].forEach(id=>document.getElementById(id).value="");
+  ["nv-nome","nv-doc","nv-tel","nv-num","nv-comp","nv-bairro"].forEach(id=>document.getElementById(id).value="");
   // Tipo de ocupação e construção: SEMPRE em branco (não persistir entre vistorias)
   document.getElementById("nv-ocupacao").value="";
   document.getElementById("nv-tipo").value="";
@@ -3005,6 +3009,45 @@ window.iniciarComoAusente=async()=>{
   }
 };
 
+// === DETECÇÃO DE BAIRRO VIA GPS ===
+// Usa geolocalização do navegador + Nominatim (OpenStreetMap, grátis, sem chave) pra
+// converter coordenadas em endereço e extrair o bairro. Preenche o campo "nv-bairro".
+// Limitações conhecidas: rate limit de ~1 req/segundo (Nominatim política de uso justo),
+// e em SP o "bairro oficial" às vezes vem como "suburb" e às vezes como "neighbourhood"
+// — por isso a função tenta múltiplos campos do retorno.
+window.detectarBairroPorGPS=async()=>{
+  const btn=document.getElementById("nv-detectar-bairro-btn");
+  if(!navigator.geolocation){alert("Seu navegador não suporta geolocalização.");return;}
+  if(btn){btn.disabled=true;btn.textContent="Buscando...";}
+  try{
+    const pos=await new Promise((resolve,reject)=>{
+      navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+    });
+    const{latitude:lat,longitude:lon}=pos.coords;
+    // Nominatim reverse geocoding. Linguagem pt-BR pra termos brasileiros.
+    const url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=pt-BR`;
+    const resp=await fetch(url,{headers:{"User-Agent":"VistoriaCautelar/1.0"}});
+    if(!resp.ok)throw new Error("Falha na resposta do servidor de mapas");
+    const data=await resp.json();
+    const a=data&&data.address||{};
+    // Tenta vários campos — em SP o bairro pode vir em qualquer um deles
+    const bairro=a.suburb||a.neighbourhood||a.city_district||a.district||a.quarter||a.village||"";
+    if(!bairro){alert("Não foi possível identificar o bairro nesta localização.\n\nVocê pode preencher manualmente.");return;}
+    document.getElementById("nv-bairro").value=bairro;
+    // Guarda as coordenadas pra usar depois no mapa do PDF (página 2 do laudo completo)
+    window._coordenadasGPSAtuais={lat,lon};
+  }catch(e){
+    console.warn("detectarBairroPorGPS:",e);
+    const msg=e.code===1?"Permissão de localização negada. Habilite no navegador.":
+              e.code===2?"Localização indisponível. Tente novamente em alguns segundos.":
+              e.code===3?"Tempo esgotado ao buscar localização.":
+              "Erro ao buscar localização: "+(e.message||e);
+    alert(msg);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent="📍 Detectar";}
+  }
+};
+
 window.criarVistoria=async()=>{
   const cId=document.getElementById("nv-cliente").value;const colId=document.getElementById("nv-coletor").value;
   const nome=document.getElementById("nv-nome").value.trim();const docR=document.getElementById("nv-doc").value.trim();const tel=document.getElementById("nv-tel").value.trim();
@@ -3043,7 +3086,14 @@ window.criarVistoria=async()=>{
   const activeCard=document.querySelector("#s-nova-vistoria .laudo-tipo-card.active");
   const tipoLaudo=(activeCard&&activeCard.dataset.tipo)||window._tipoLaudoAtual||localStorage.getItem("lastTipoLaudo")||"completo";
   localStorage.setItem("lastTipoLaudo",tipoLaudo);
-  currentVistoria={clienteId:cId,coletorId:colId,clienteNome:clD.nome,clienteRRT:clD.rrt,coletorNome:colD.nome,responsavel:{nome,doc:docR,tel},endereco:{rua,num,comp},ocupacao:document.getElementById("nv-ocupacao").value,tipo:document.getElementById("nv-tipo").value,tipoLaudo,data:now.toLocaleDateString("pt-BR"),dataCompleta:now.toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"}),userId:currentUser.uid,checklist:{},observacoes:"",estado:"",idade:"",status:"em_andamento"};
+  const bairro=(document.getElementById("nv-bairro")||{}).value||"";
+  // Captura coordenadas GPS guardadas pelo botão "Detectar bairro", se foram usadas.
+  // Servirá pra renderizar o mapa do imóvel na página 2 do PDF do laudo completo.
+  const gps=window._coordenadasGPSAtuais||null;
+  currentVistoria={clienteId:cId,coletorId:colId,clienteNome:clD.nome,clienteRRT:clD.rrt,coletorNome:colD.nome,responsavel:{nome,doc:docR,tel},endereco:{rua,num,comp,bairro:bairro.trim()},gps,ocupacao:document.getElementById("nv-ocupacao").value,tipo:document.getElementById("nv-tipo").value,tipoLaudo,data:now.toLocaleDateString("pt-BR"),dataCompleta:now.toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"}),userId:currentUser.uid,checklist:{},observacoes:"",estado:"",idade:"",status:"em_andamento"};
+  // Reseta as coordenadas GPS detectadas — vista a próxima vistoria, o usuário precisa
+  // clicar de novo no "Detectar" pra atualizar (evita vazamento entre vistorias)
+  window._coordenadasGPSAtuais=null;
   // RESET DEFENSIVO: limpa TODAS as variáveis globais que poderiam vazar de uma vistoria
   // anterior. Crítico após "Gerar PDF Novamente" ou banner pós-finalização — caminhos onde
   // _bkFotosPendentes do regeRarPDF poderia ter deixado lixo se houvesse erro.
@@ -5942,7 +5992,13 @@ window.finalizarVistoria=async()=>{
         // No completo, "Local" mostra o(s) AMBIENTE(s) da página (Fachada, Cozinha, etc),
         // não o endereço — fiel ao modelo CNRP. Múltiplos ambientes na mesma página
         // são juntados por " / ".
-        YinicialFotos=_pdfHeaderFotosCompleto(pdf,ML,MT,CW,locais.join(" / "),currentVistoria.data||"")+2;
+        // IMPORTANTE: força mesma origem Y do simplificado (Y0 = MT + HDR), pra que as
+        // dimensões disponíveis pra cada foto sejam idênticas. Sem isso, no completo
+        // sobravam ~39mm a mais por página, e as fotos retrato em par lado a lado ficavam
+        // estreitas e altas demais comparado ao simplificado. Forçando o mesmo ponto de
+        // partida, o layout fica visualmente equivalente.
+        _pdfHeaderFotosCompleto(pdf,ML,MT,CW,locais.join(" / "),currentVistoria.data||"");
+        YinicialFotos=Y0;
       } else {
         pdfHeader(pdf,ML,PW,CW,currentVistoria,locais.join(" / "),logoSrc,HDR,MT,logoPrep);
         YinicialFotos=Y0;
@@ -6859,6 +6915,37 @@ function _pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW){
 //  - Espaçamento de linha 1,5 (estilo Word). Cálculo: fontSize (pt) * 1.5 / 2.83 = mm.
 //    O parâmetro linhaH é ignorado (mantido na assinatura por compatibilidade) — usamos
 //    sempre o cálculo automático pra garantir consistência tipográfica em todas as chamadas.
+// === MAPA DA LOCALIZAÇÃO (OpenStreetMap) ===
+// Baixa uma imagem estática centrada nas coordenadas dadas e converte pra base64.
+// Usa o serviço staticmap.openstreetmap.de (mantido pela comunidade alemã, grátis e sem
+// chave). Como o servidor pode estar fora do ar ou demorar, há timeout de 8s e fallback
+// silencioso (se falhar, o PDF segue com o quadro vazio "Mapa não disponível").
+// Retorna {dataUrl, w, h} ou null.
+async function baixarMapaOSM(lat,lon,larguraPx,alturaPx){
+  if(!lat||!lon)return null;
+  // staticmap.openstreetmap.de aceita zoom (1-19), center (lat,lon), size (WxH),
+  // markers (lat,lon,red-pushpin). Limita pixels a 1280 (limite do serviço).
+  const w=Math.min(larguraPx||640,1280);
+  const h=Math.min(alturaPx||400,1280);
+  const zoom=16; // bom equilíbrio entre detalhe da rua e contexto do bairro
+  const url=`https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=${zoom}&size=${w}x${h}&markers=${lat},${lon},red-pushpin`;
+  try{
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),8000);
+    const resp=await fetch(url,{signal:ctrl.signal});
+    clearTimeout(timer);
+    if(!resp.ok)return null;
+    const blob=await resp.blob();
+    const dataUrl=await new Promise((res,rej)=>{
+      const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);
+    });
+    return {dataUrl,w,h};
+  }catch(e){
+    console.warn("baixarMapaOSM:",e);
+    return null;
+  }
+}
+
 function _pdfTextoBloco(pdf,texto,x,y,maxW,fontSize,linhaH,bold){
   const fs=fontSize||10;
   pdf.setFont("helvetica",bold?"bold":"normal");pdf.setFontSize(fs);
@@ -6903,129 +6990,152 @@ function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
   pdf.text("Complemento: "+(e.comp||""),ML+CW*0.5,y+4);
   y+=linhaH+4;
 
-  // === 1.0 INFORMAÇÕES GERAIS — 3 colunas (Serviços | Ocupação | Zoneamento) ===
+  // === 1.0 INFORMAÇÕES GERAIS — TABELA com 3 colunas e cabeçalho ===
   pdf.setFont("helvetica","bold");pdf.setFontSize(10);
-  pdf.text("1.0 INFORMAÇÕES GERAIS",ML,y);y+=5;
+  pdf.text("1.0 INFORMAÇÕES GERAIS",ML,y);y+=6;
   const id=v.identificacao||{};
   const sp=id.servicosPublicos||{};
   const ocupSel=(v.ocupacao||"").toLowerCase();
   const zoneSel=(id.zoneamento||"").toLowerCase();
   const colW=CW/3;
-  const yIniInfo=y;
+  // Cabeçalho da tabela (linha cinza claro)
+  const cabH=7;
+  pdf.setFillColor(245,247,250);
+  pdf.rect(ML,y,CW,cabH,"F");
+  pdf.setDrawColor(180,180,180);pdf.setLineWidth(0.2);
+  pdf.rect(ML,y,CW,cabH,"S");
+  pdf.line(ML+colW,y,ML+colW,y+cabH);
+  pdf.line(ML+2*colW,y,ML+2*colW,y+cabH);
+  pdf.setFont("helvetica","bold");pdf.setFontSize(9);
+  pdf.setTextColor(60,60,60);
+  pdf.text("Serviços Públicos Disponíveis",ML+2,y+4.7);
+  pdf.text("Tipo de Ocupação",ML+colW+2,y+4.7);
+  pdf.text("Zoneamento",ML+2*colW+2,y+4.7);
+  pdf.setTextColor(0,0,0);
+  y+=cabH;
+  // Corpo da tabela
   const altInfo=55;
-  pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
   pdf.rect(ML,y,CW,altInfo,"S");
   pdf.line(ML+colW,y,ML+colW,y+altInfo);
   pdf.line(ML+2*colW,y,ML+2*colW,y+altInfo);
-  // Cabeçalhos
-  pdf.setFont("helvetica","bold");pdf.setFontSize(9);
-  pdf.text("Serviços Públicos",ML+colW/2,y+4,{align:"center"});
-  pdf.text("Tipo de Ocupação",ML+colW+colW/2,y+4,{align:"center"});
-  pdf.text("Zoneamento",ML+2*colW+colW/2,y+4,{align:"center"});
-  pdf.line(ML,y+5.5,ML+CW,y+5.5);
-  // Conteúdo coluna 1: serviços
-  pdf.setFont("helvetica","normal");pdf.setFontSize(8);
+  pdf.setFont("helvetica","normal");pdf.setFontSize(8.5);
   const servItens=[
     ["Energia Elétrica",sp.energia!==false],["Iluminação Pública",sp.iluminacao!==false],
     ["Pavimentação",sp.pavimentacao!==false],["Guias e Sarjetas",sp.guias!==false],
     ["Gás Encanado",sp.gas!==false],["Rede Telefônica",sp.telefone!==false],
     ["Rede de Água",sp.agua!==false],["Rede de Esgoto",sp.esgoto!==false],
-    ["Rede Pluviais",sp.drenagem!==false]
+    ["Redes Pluviais",sp.drenagem!==false]
   ];
-  let yi=y+9;
-  servItens.forEach(([txt,marc])=>{pdf.text((marc?"[X] ":"[ ] ")+txt,ML+2,yi);yi+=4.6;});
-  // Conteúdo coluna 2: ocupação (lista das opções do select da Nova Vistoria)
+  let yi=y+5;
+  servItens.forEach(([txt,marc])=>{pdf.text((marc?"[X] ":"[ ] ")+txt,ML+3,yi);yi+=5;});
+  // Coluna 2: ocupação
   const ocupOpcoes=["Residencial","Comercial","Industrial","Institucional","Religioso","Serviços","Outros"];
-  yi=y+9;
+  yi=y+5;
   ocupOpcoes.forEach(opt=>{
     const marc=opt.toLowerCase()===ocupSel;
-    pdf.text((marc?"[X] ":"[ ] ")+opt,ML+colW+2,yi);yi+=4.6;
+    pdf.text((marc?"[X] ":"[ ] ")+opt,ML+colW+3,yi);yi+=5;
   });
-  // Conteúdo coluna 3: zoneamento
+  // Coluna 3: zoneamento
   const zoneOpcoes=["Residencial","Comercial","Industrial","Misto"];
-  yi=y+9;
+  yi=y+5;
   zoneOpcoes.forEach(opt=>{
     const marc=opt.toLowerCase()===zoneSel;
-    pdf.text((marc?"[X] ":"[ ] ")+opt,ML+2*colW+2,yi);yi+=4.6;
+    pdf.text((marc?"[X] ":"[ ] ")+opt,ML+2*colW+3,yi);yi+=5;
   });
-  y+=altInfo+4;
+  y+=altInfo+6;
 
-  // === 2.0 DESCRIÇÃO DO IMÓVEL ===
+  // === 2.0 DESCRIÇÃO DO IMÓVEL — TABELA de 2 colunas (Característica | Detalhe) ===
   pdf.setFont("helvetica","bold");pdf.setFontSize(10);
-  pdf.text("2.0 DESCRIÇÃO DO IMÓVEL",ML,y);y+=5;
-  const tipoSel=(v.tipo||"").toLowerCase();
-  const garagSel=(id.garagem||"").toLowerCase();
-  // Materiais agora são arrays (seleção múltipla). Compat: aceita string antiga.
+  pdf.text("2.0 DESCRIÇÃO DO IMÓVEL",ML,y);y+=6;
+  // Materiais agora são arrays. Compat: aceita string antiga. JUNTA COM VÍRGULA pra exibição.
   const _mc=id.materiais&&id.materiais.cobertura;
   const _mp=id.materiais&&id.materiais.paredes;
-  const coberArr=Array.isArray(_mc)?_mc.map(s=>s.toLowerCase()):(_mc?[String(_mc).toLowerCase()]:[]);
-  const parArr=Array.isArray(_mp)?_mp.map(s=>s.toLowerCase()):(_mp?[String(_mp).toLowerCase()]:[]);
+  const coberArr=Array.isArray(_mc)?_mc:(_mc?[String(_mc)]:[]);
+  const parArr=Array.isArray(_mp)?_mp:(_mp?[String(_mp)]:[]);
+  const tipoSel=(v.tipo||"").toLowerCase();
+  const garagSel=(id.garagem||"").toLowerCase();
   const estadoSel=(v.estado||"").toLowerCase();
-  // 2 colunas: esquerda Tipo+Garagem+Cobertura+Paredes  | direita: Pavimentos+Idade+Estado
-  const cW2=CW/2;
-  const altDesc=66;
-  pdf.setDrawColor(0,0,0);pdf.setLineWidth(0.3);
-  pdf.rect(ML,y,CW,altDesc,"S");
-  pdf.line(ML+cW2,y,ML+cW2,y+altDesc);
+  // Helper: renderiza opções inline com [X]/[  ] e item destacado
+  const coluna1W=CW*0.35;
+  const renderOpcoes=(opcoes,sel,x,yy)=>{
+    let xT=x;
+    opcoes.forEach(t=>{
+      const m=t.toLowerCase()===sel;
+      const lab=(m?"[X] ":"[ ] ")+t;
+      pdf.text(lab,xT,yy);
+      xT+=pdf.getTextWidth(lab)+4;
+    });
+  };
+  // Linhas da tabela: [label, valor/render]
+  // Cobertura, Paredes vêm como arrays — juntam com vírgula
+  const linhasDesc=[
+    {label:"Tipo da Edificação",render:yy=>renderOpcoes(["Térrea","Sobrado","Galpão","Soleira Negativa"],tipoSel,ML+coluna1W+2,yy)},
+    {label:"Garagem",render:yy=>renderOpcoes(["Coberta","Descoberta","Não tem"],garagSel,ML+coluna1W+2,yy)},
+    {label:"Nº de Pavimentos",texto:id.pavimentos||""},
+    {label:"Idade Aparente",texto:(v.idade||"")+(v.idade?" anos":"")},
+    {label:"Cobertura",texto:coberArr.join(", ")},
+    {label:"Paredes",texto:parArr.join(", ")},
+    {label:"Estado de Conservação",render:yy=>renderOpcoes(["Bom","Regular","Ruim","Péssimo"],estadoSel,ML+coluna1W+2,yy)}
+  ];
+  const linhaH2=7;
+  const totalDescH=cabH+linhasDesc.length*linhaH2;
+  // Cabeçalho
+  pdf.setFillColor(245,247,250);
+  pdf.rect(ML,y,CW,cabH,"F");
+  pdf.rect(ML,y,CW,cabH,"S");
+  pdf.line(ML+coluna1W,y,ML+coluna1W,y+totalDescH);
   pdf.setFont("helvetica","bold");pdf.setFontSize(9);
-  pdf.text("Tipo / Garagem / Materiais",ML+cW2/2,y+4,{align:"center"});
-  pdf.text("Dados gerais",ML+cW2+cW2/2,y+4,{align:"center"});
-  pdf.line(ML,y+5.5,ML+CW,y+5.5);
-  pdf.setFont("helvetica","normal");pdf.setFontSize(8);
-  // Coluna esquerda
-  yi=y+9;
-  pdf.setFont("helvetica","bold");pdf.text("Tipo:",ML+2,yi);pdf.setFont("helvetica","normal");
-  const tipos=["Térrea","Sobrado","Galpão","Soleira Negativa"];
-  let xT=ML+13;
-  tipos.forEach(t=>{const m=t.toLowerCase()===tipoSel;const lab=(m?"[X] ":"[ ] ")+t;pdf.text(lab,xT,yi);xT+=pdf.getStringUnitWidth(lab)*8*0.40+2;});
-  yi+=5;
-  pdf.setFont("helvetica","bold");pdf.text("Garagem:",ML+2,yi);pdf.setFont("helvetica","normal");
-  const garagens=["Coberta","Descoberta","Não tem"];
-  xT=ML+19;
-  garagens.forEach(t=>{const m=t.toLowerCase()===garagSel;const lab=(m?"[X] ":"[ ] ")+t;pdf.text(lab,xT,yi);xT+=pdf.getStringUnitWidth(lab)*8*0.40+2;});
-  yi+=5;
-  pdf.setFont("helvetica","bold");pdf.text("Cobertura:",ML+2,yi);yi+=4.5;pdf.setFont("helvetica","normal");
-  const coberOpc=["Telhas de Barro","Telhas de Fibrocimento","Telha Metálica","Laje de Concreto","Forro de Madeira","Forro PVC"];
-  coberOpc.forEach(opt=>{const m=coberArr.includes(opt.toLowerCase());pdf.text((m?"[X] ":"[ ] ")+opt,ML+4,yi);yi+=4.2;});
-  yi+=1;
-  pdf.setFont("helvetica","bold");pdf.text("Paredes:",ML+2,yi);yi+=4.5;pdf.setFont("helvetica","normal");
-  const parOpc=["Blocos de Cimento","Tijolos de Barro"];
-  parOpc.forEach(opt=>{const m=parArr.includes(opt.toLowerCase());pdf.text((m?"[X] ":"[ ] ")+opt,ML+4,yi);yi+=4.2;});
-  // Coluna direita
-  yi=y+9;
-  pdf.setFont("helvetica","bold");pdf.text("Nº de pavimentos:",ML+cW2+2,yi);pdf.setFont("helvetica","normal");
-  pdf.text(id.pavimentos||"",ML+cW2+38,yi);yi+=6;
-  pdf.setFont("helvetica","bold");pdf.text("Idade aparente:",ML+cW2+2,yi);pdf.setFont("helvetica","normal");
-  pdf.text((v.idade||"")+(v.idade?" anos":""),ML+cW2+38,yi);yi+=6;
-  pdf.setFont("helvetica","bold");pdf.text("Estado de conservação:",ML+cW2+2,yi);yi+=5;pdf.setFont("helvetica","normal");
-  const ests=["Bom","Regular","Ruim","Péssimo"];
-  ests.forEach(opt=>{const m=opt.toLowerCase()===estadoSel;pdf.text((m?"[X] ":"[ ] ")+opt,ML+cW2+4,yi);yi+=4.5;});
-  y+=altDesc+4;
+  pdf.setTextColor(60,60,60);
+  pdf.text("Característica",ML+2,y+4.7);
+  pdf.text("Detalhe Identificado",ML+coluna1W+2,y+4.7);
+  pdf.setTextColor(0,0,0);
+  y+=cabH;
+  // Linhas
+  pdf.setFontSize(8.5);
+  linhasDesc.forEach(l=>{
+    pdf.setDrawColor(180,180,180);pdf.setLineWidth(0.2);
+    pdf.rect(ML,y,CW,linhaH2,"S");
+    pdf.line(ML+coluna1W,y,ML+coluna1W,y+linhaH2);
+    pdf.setFont("helvetica","bold");
+    pdf.text(l.label,ML+2,y+4.7);
+    pdf.setFont("helvetica","normal");
+    if(l.render)l.render(y+4.7);
+    else pdf.text(l.texto||"",ML+coluna1W+2,y+4.7);
+    y+=linhaH2;
+  });
+  y+=6;
 
-  // === 2.3 LISTA DE VERIFICAÇÃO — DANOS (preenchida automaticamente) ===
+  // === 2.3 LISTA DE VERIFICAÇÃO — TABELA com Elemento | Apresenta Danos? ===
   pdf.setFont("helvetica","bold");pdf.setFontSize(10);
-  pdf.text("2.3 LISTA DE VERIFICAÇÃO DOS ELEMENTOS CONSTRUTIVOS",ML,y);y+=5;
+  pdf.text("2.3 LISTA DE VERIFICAÇÃO DE ELEMENTOS CONSTRUTIVOS",ML,y);y+=6;
   const danos=calcularChecklistDanos(fotosPendentes);
   const linhasChk=_CHECKLIST_LINHAS;
-  const altChk=8+linhasChk.length*5;
-  pdf.rect(ML,y,CW,altChk,"S");
+  const colElem=CW*0.6,colDano=CW*0.4;
+  const altCab=7,altLinha=7;
+  const totalChkH=altCab+linhasChk.length*altLinha;
   // Cabeçalho
-  const cW3=CW*0.7,cW4=CW*0.15;
-  pdf.line(ML+cW3,y,ML+cW3,y+altChk);
-  pdf.line(ML+cW3+cW4,y,ML+cW3+cW4,y+altChk);
-  pdf.line(ML,y+8,ML+CW,y+8);
+  pdf.setFillColor(245,247,250);
+  pdf.rect(ML,y,CW,altCab,"F");
+  pdf.setDrawColor(180,180,180);pdf.setLineWidth(0.2);
+  pdf.rect(ML,y,CW,altCab,"S");
+  pdf.line(ML+colElem,y,ML+colElem,y+totalChkH);
   pdf.setFont("helvetica","bold");pdf.setFontSize(9);
-  pdf.text("Especificação",ML+cW3/2,y+5.5,{align:"center"});
-  pdf.text("Sim",ML+cW3+cW4/2,y+5.5,{align:"center"});
-  pdf.text("Não",ML+cW3+cW4+cW4/2,y+5.5,{align:"center"});
-  pdf.setFont("helvetica","normal");pdf.setFontSize(9);
-  let yL=y+12.5;
+  pdf.setTextColor(60,60,60);
+  pdf.text("Elemento Construtivo",ML+2,y+4.7);
+  pdf.text("Apresenta Danos?",ML+colElem+colDano/2,y+4.7,{align:"center"});
+  pdf.setTextColor(0,0,0);
+  y+=altCab;
+  // Linhas
+  pdf.setFontSize(8.5);
   linhasChk.forEach(l=>{
-    pdf.text(l,ML+2,yL);
+    pdf.setDrawColor(180,180,180);pdf.setLineWidth(0.2);
+    pdf.rect(ML,y,CW,altLinha,"S");
+    pdf.line(ML+colElem,y,ML+colElem,y+altLinha);
+    pdf.setFont("helvetica","normal");
+    pdf.text(l,ML+2,y+4.7);
     const temDano=danos[l]===true;
-    pdf.text(temDano?"X":"",ML+cW3+cW4/2,yL,{align:"center"});
-    pdf.text(!temDano?"X":"",ML+cW3+cW4+cW4/2,yL,{align:"center"});
-    yL+=5;
+    pdf.text(temDano?"Sim":"Não",ML+colElem+colDano/2,y+4.7,{align:"center"});
+    y+=altLinha;
   });
 }
 
@@ -7066,12 +7176,29 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
   pdf.setFont("helvetica","bold");pdf.setFontSize(9);
   pdf.text("Mapa 1:",ML+4,y);pdf.setFont("helvetica","normal");pdf.text(" Mapa de localização do imóvel inspecionado.",ML+18,y);
   y+=5;
-  // Espaço reservado para mapa
+  // Quadro do mapa: 80mm de altura, largura total disponível.
+  const mapaW=CW-8,mapaH=80;
   pdf.setDrawColor(150,150,150);pdf.setLineWidth(0.3);
-  pdf.rect(ML+4,y,CW-8,80,"S");
-  pdf.setFontSize(9);pdf.setTextColor(150,150,150);
-  pdf.text("(Mapa de localização — anexar manualmente se necessário)",ML+4+(CW-8)/2,y+42,{align:"center"});
-  pdf.setTextColor(0,0,0);
+  pdf.rect(ML+4,y,mapaW,mapaH,"S");
+  // Se a vistoria tem coordenadas GPS (capturadas pelo "Detectar Bairro"), insere o mapa.
+  // Senão, deixa o quadro vazio com aviso pra o usuário inserir manualmente.
+  let mapaInserido=false;
+  if(v.gps&&v.gps.lat&&v.gps.lon){
+    try{
+      // Pixel ratio razoável pra qualidade no PDF (1mm ≈ 3.78px em 96dpi).
+      // Solicita 800x300px pro mapa (~2x o tamanho exibido, mantém nitidez ao imprimir).
+      const mapa=await baixarMapaOSM(v.gps.lat,v.gps.lon,800,300);
+      if(mapa&&mapa.dataUrl){
+        pdf.addImage(mapa.dataUrl,"PNG",ML+4,y,mapaW,mapaH,"","FAST");
+        mapaInserido=true;
+      }
+    }catch(e){console.warn("Erro ao inserir mapa:",e);}
+  }
+  if(!mapaInserido){
+    pdf.setFontSize(9);pdf.setTextColor(150,150,150);
+    pdf.text("(Mapa de localização — anexar manualmente se necessário)",ML+4+mapaW/2,y+mapaH/2,{align:"center"});
+    pdf.setTextColor(0,0,0);
+  }
   _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,2,"X");
 
   // ===== PÁGINA 3 — METODOLOGIA + ANÁLISE =====
