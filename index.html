@@ -3102,7 +3102,7 @@ window.criarVistoria=async()=>{
   fotoAtualBlob=null;fotoAtualTipo=null;fotoAtualAmbiente=null;
   arrowImage=null;arrowPoints=[];
   _fotoSetasAcumuladas=[];_fotoOriginalBlob=null;
-  _patCombinacoes=[];_patCatSelecionada=null;
+  _patCombinacoes=[];_patCatSelecionada=null;window._patLocalSelecionado=null;
   window._ultimaVistoriaFinalizada=null;
   document.getElementById("v-titulo").textContent=nome?nome.split(" ")[0]:"Vistoria";
   const badgeTipo=tipoLaudo==="completo"?'<span class="badge laudo" style="display:inline-block;margin-bottom:4px">Laudo Completo</span><br>':'';
@@ -4237,6 +4237,39 @@ function abrirModalPatologiasCompleto(){
 function renderSubitensCompleto(cod){
   const cat=PATOLOGIAS_AL_MAP[cod];
   const list=document.getElementById("pat-list");list.innerHTML="";
+  // Categorias D (Revestimento) e G (Pintura) podem estar em vários lugares —
+  // por isso ganham um seletor de "Local" no topo do modal. O cadastrador escolhe
+  // se a pintura/revestimento é de parede, teto ou esquadria. A legenda fica
+  // "Pintura (Parede): Desplacamento", muito mais informativa pro leitor do laudo.
+  // Categorias com locais possíveis. Local "" = não especificado (usuário pode escolher).
+  const PRECISA_LOCAL={D:["Parede","Teto","Esquadria"],G:["Parede","Teto","Esquadria"]};
+  const locaisPossiveis=PRECISA_LOCAL[cod];
+  if(locaisPossiveis){
+    const wrap=document.createElement("div");wrap.style.cssText="background:#f3f4f6;border-radius:8px;padding:10px;margin-bottom:10px";
+    const titulo=document.createElement("div");titulo.style.cssText="font-size:13px;font-weight:600;margin-bottom:8px;color:#374151";
+    titulo.textContent="Local da "+cat.nome.toLowerCase()+":";
+    wrap.appendChild(titulo);
+    const opts=document.createElement("div");opts.style.cssText="display:flex;gap:6px;flex-wrap:wrap";
+    locaisPossiveis.forEach(loc=>{
+      const btn=document.createElement("button");
+      btn.type="button";btn.dataset.local=loc;
+      btn.className="local-btn";
+      btn.style.cssText="padding:8px 14px;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:13px;cursor:pointer";
+      btn.textContent=loc;
+      btn.onclick=()=>{
+        document.querySelectorAll(".local-btn").forEach(b=>{b.style.background="#fff";b.style.color="#000";b.style.borderColor="#d1d5db";});
+        btn.style.background="#1d4ed8";btn.style.color="#fff";btn.style.borderColor="#1d4ed8";
+        window._patLocalSelecionado=loc;
+      };
+      opts.appendChild(btn);
+    });
+    wrap.appendChild(opts);
+    list.appendChild(wrap);
+    window._patLocalSelecionado=null;
+  } else {
+    window._patLocalSelecionado=null;
+  }
+  // Renderizar subitens
   cat.subs.forEach(s=>{
     const item=document.createElement("div");item.className="pat-item";
     const cb=document.createElement("input");cb.type="checkbox";cb.id="pat-cb-"+cod+s.n;cb.value=s.n;
@@ -4252,16 +4285,25 @@ window.adicionarCombinacao=()=>{
   const tipoLaudo=(currentVistoria&&currentVistoria.tipoLaudo)||"simplificado";
   if(tipoLaudo==="completo"){
     if(!_patCatSelecionada)return alert("Selecione uma categoria (A–L)");
+    // Pintura (G) e Revestimento (D) exigem Local — sem isso a legenda fica ambígua.
+    const PRECISA_LOCAL={D:true,G:true};
+    if(PRECISA_LOCAL[_patCatSelecionada]&&!window._patLocalSelecionado){
+      return alert("Selecione o Local (Parede, Teto ou Esquadria).");
+    }
     const checkedSubs=Array.from(document.querySelectorAll("#pat-list input:checked")).map(cb=>parseInt(cb.value)).sort((a,b)=>a-b);
     if(!checkedSubs.length)return alert("Selecione ao menos um subitem");
     const cat=PATOLOGIAS_AL_MAP[_patCatSelecionada];
     const codigo=_patCatSelecionada+checkedSubs.join(";");
     const combo={modo:"completo",categoria:_patCatSelecionada,categoriaNome:cat.nome,subs:checkedSubs,codigo};
+    // Anexa o local se foi exigido (Pintura/Revestimento). Vai pra legenda como
+    // "Pintura (Parede): Desplacamento" — comunica claramente onde está o problema.
+    if(window._patLocalSelecionado)combo.local=window._patLocalSelecionado;
     _patCombinacoes.push(combo);
     // Limpar para próxima
     document.querySelectorAll("#part-grid .part-btn").forEach(b=>b.classList.remove("selected"));
     document.getElementById("pat-list").innerHTML='<div style="font-size:12px;color:#888;padding:8px">Selecione uma categoria para ver os subitens.</div>';
     _patCatSelecionada=null;
+    window._patLocalSelecionado=null;
     renderCombinacoes();
     return;
   }
@@ -4317,23 +4359,35 @@ function unificarLegendasCombos(combinacoes){
   if(!combinacoes||!combinacoes.length)return "";
   const temCompleto=combinacoes.some(c=>c.modo==="completo");
   if(temCompleto){
-    // Agrupar por categoria, deduplicar subitens (idêntico ao simplificado mas com categoria)
-    const ordemCat=[];
+    // Modo completo no MESMO formato do simplificado: "Categoria: pat1 / pat2".
+    // Quando a categoria tem LOCAL (Pintura/Revestimento), fica: "Pintura (Parede): pat1 / pat2".
+    // Múltiplas categorias separadas por " / " (ex: "Parede: Trincas / Pintura (Teto): Desplacamento").
+    // Mantém os plurais ("Trincas", "Fissuras", "Rachaduras") porque a categoria pode ter
+    // várias ocorrências da mesma patologia na foto.
+    // Exceção: categoria "Outros" (cod L) só mostra os subitens, sem o prefixo.
+    // IMPORTANTE: agrupamos por (categoria + local) — assim "Pintura (Parede)" e
+    // "Pintura (Teto)" são linhas separadas na legenda.
+    const ordemChave=[];
     const grupos={};
     combinacoes.forEach(c=>{
       if(c.modo!=="completo")return;
       const cat=PATOLOGIAS_AL_MAP[c.categoria];if(!cat)return;
-      if(!grupos[c.categoria]){grupos[c.categoria]={subs:[],set:new Set(),nome:cat.nome};ordemCat.push(c.categoria);}
+      const chave=c.categoria+(c.local?"|"+c.local:"");
+      if(!grupos[chave]){
+        grupos[chave]={subs:[],set:new Set(),nome:cat.nome,local:c.local||"",cod:c.categoria};
+        ordemChave.push(chave);
+      }
       c.subs.forEach(n=>{
         const s=cat.subs.find(x=>x.n===n);if(!s)return;
-        if(!grupos[c.categoria].set.has(s.t)){grupos[c.categoria].set.add(s.t);grupos[c.categoria].subs.push(s.t);}
+        if(!grupos[chave].set.has(s.t)){grupos[chave].set.add(s.t);grupos[chave].subs.push(s.t);}
       });
     });
-    return ordemCat.map(cod=>{
-      const g=grupos[cod];
+    return ordemChave.map(chave=>{
+      const g=grupos[chave];
       const subStr=g.subs.join(" / ");
-      if(cod==="L")return subStr; // "Outros" não recebe "em Outros"
-      return subStr+" em "+g.nome;
+      if(g.cod==="L")return subStr; // "Outros" não recebe prefixo
+      const prefixo=g.nome+(g.local?" ("+g.local+")":"");
+      return prefixo+": "+subStr;
     }).join(" / ");
   }
   // Simplificado: agrupar por elemento, deduplicar patologias, preservar ordem
@@ -4428,17 +4482,27 @@ function gerarConclusaoAutomatica(){
   return texto;
 }
 
-// Mapeamento (categoria interna A-L → linha do checklist do Anexo I).
-// Usado para preencher automaticamente a tabela "Especificação / Danos".
+// Mapeamento (categoria interna A-N → linha do checklist do Anexo I).
+// Cada categoria de patologia tem sua PRÓPRIA linha — totaliza 14 linhas detalhadas.
+// O nome da linha é o mesmo nome da categoria no PATOLOGIAS_AL (com pequenas variações
+// pra leitura: "Estruturas" em vez de só "Estrutura" no plural quando for elemento construtivo).
 const _CHECKLIST_MAP={
-  A:"Estruturas", E:"Estruturas",
-  B:"Paredes e Muros", D:"Paredes e Muros", G:"Paredes e Muros",
-  C:"Coberturas / Tetos", M:"Coberturas / Tetos", J:"Coberturas / Tetos",
-  F:"Portas e Esquadrias", I:"Portas e Esquadrias", N:"Portas e Esquadrias",
-  H:"Pisos e Calçamentos",
-  K:"Equipamentos", L:"Equipamentos"
+  A:"Estruturas",
+  B:"Paredes",
+  C:"Tetos",
+  M:"Forros",
+  D:"Revestimentos",
+  E:"Estruturas Metálicas",
+  F:"Vidros",
+  G:"Pintura",
+  H:"Pisos",
+  I:"Portas",
+  N:"Esquadrias",
+  J:"Telhados",
+  K:"Instalações Hidráulicas",
+  L:"Outros"
 };
-const _CHECKLIST_LINHAS=["Estruturas","Paredes e Muros","Coberturas / Tetos","Portas e Esquadrias","Pisos e Calçamentos","Equipamentos (antenas parabólicas, etc.)"];
+const _CHECKLIST_LINHAS=["Estruturas","Paredes","Tetos","Forros","Revestimentos","Estruturas Metálicas","Vidros","Pintura","Pisos","Portas","Esquadrias","Telhados","Instalações Hidráulicas","Outros"];
 
 // Retorna objeto {linha → boolean} com base nas patologias anotadas em todas as fotos.
 // "Equipamentos (antenas parabólicas, etc.)" no map é tratada via prefixo "Equipamentos".
@@ -4499,13 +4563,13 @@ window.confirmarPatologias=()=>{
   if(tipoLaudo!=="completo"){
     if(arrowPoints.length===0){
       // Caso extremo: não há seta ainda. Salva só com seleção pendente (deve ser raro).
-      _patCombinacoes=[];_patCatSelecionada=null;
+      _patCombinacoes=[];_patCatSelecionada=null;window._patLocalSelecionado=null;
       return;
     }
     arrowPoints.forEach(p=>{
       _fotoSetasAcumuladas.push({pontoFracao:p,combinacao:combinacaoDesta,combinacoesArr:combinacoesArrSnapshot});
     });
-    _patCombinacoes=[];_patCatSelecionada=null;
+    _patCombinacoes=[];_patCatSelecionada=null;window._patLocalSelecionado=null;
     const tipoLaudoFinal=tipoLaudo;
     const dataUrlFinal=renderizarFotoComAcumuladas(tipoLaudoFinal);
     fotoAtualBlob=dataUrlFinal;
@@ -6319,15 +6383,23 @@ window.finalizarVistoria=async()=>{
     let vRef=null;
     let erroPersistencia=null;
     try{
-      if(currentVistoria._retornoId){
-        const docRef=doc(db,"vistorias",currentVistoria._retornoId);
-        const{criadoEm,...vDocUpd}=vDoc;
-        vDocUpd.atualizadoEm=serverTimestamp();
-        await updateDoc(docRef,vDocUpd);
-        vRef={id:currentVistoria._retornoId};
-      } else {
-        vRef=await addDoc(collection(db,"vistorias"),vDoc);
-      }
+      // Timeout de 15s no Firestore — evita ficar pendurado pra sempre se o servidor
+      // não responder ou se o cliente foi terminado (multi-tab race condition).
+      // Se passar de 15s, joga erro pro catch — usuário recebe alert visível em vez
+      // de tela travada em "Salvando vistoria...".
+      const opPromise=currentVistoria._retornoId
+        ? (async()=>{
+            const docRef=doc(db,"vistorias",currentVistoria._retornoId);
+            const{criadoEm,...vDocUpd}=vDoc;
+            vDocUpd.atualizadoEm=serverTimestamp();
+            await updateDoc(docRef,vDocUpd);
+            return {id:currentVistoria._retornoId};
+          })()
+        : addDoc(collection(db,"vistorias"),vDoc);
+      vRef=await Promise.race([
+        opPromise,
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error("TIMEOUT: gravação demorou mais de 15s")),15000))
+      ]);
       // Sucesso: atualiza o objeto temporário com o ID gerado
       if(vRef&&vRef.id&&window._ultimaVistoriaFinalizada){
         window._ultimaVistoriaFinalizada.id=vRef.id;
@@ -6366,13 +6438,21 @@ window.finalizarVistoria=async()=>{
     // Se a gravação no Firestore (feita antes do ZIP) falhou, avisa MAS não perde o trabalho:
     // o PDF e o ZIP já foram baixados, e a sessão é mantida pra nova tentativa de salvar.
     if(erroPersistencia){
-      const msgPerm=(erroPersistencia.code==="permission-denied"||/insufficient permissions/i.test(erroPersistencia.message||""))
-        ?"\n\n⚠️ Seu usuário está sem permissão para salvar no servidor. O PDF e as fotos JÁ foram baixados no celular — guarde-os. Avise o administrador para verificar seu cadastro (peça para sair e entrar novamente no app)."
-        :"\n\nO PDF e as fotos já foram baixados no celular. Tente finalizar novamente para salvar no servidor.";
+      const msg=erroPersistencia.message||"";
+      let detalhe;
+      if(/TIMEOUT/i.test(msg)){
+        detalhe="\n\n⚠️ O servidor demorou demais para responder (timeout de 15s). O PDF e as fotos JÁ foram baixados no celular. Verifique sua conexão e tente finalizar novamente — a vistoria continua na sessão.";
+      } else if(erroPersistencia.code==="permission-denied"||/insufficient permissions/i.test(msg)){
+        detalhe="\n\n⚠️ Seu usuário está sem permissão para salvar no servidor. O PDF e as fotos JÁ foram baixados no celular — guarde-os. Avise o administrador para verificar seu cadastro (peça para sair e entrar novamente no app).";
+      } else if(/terminated/i.test(msg)){
+        detalhe="\n\n⚠️ Conexão com o banco foi perdida (outra aba aberta?). Recarregue a página e tente finalizar novamente. O PDF e as fotos já estão no celular.";
+      } else {
+        detalhe="\n\nErro: "+msg+"\n\nO PDF e as fotos já foram baixados no celular. Tente finalizar novamente para salvar no servidor.";
+      }
       // Mantém a sessão viva pra nova tentativa
       if(_backupVistoria)currentVistoria=_backupVistoria;
       if(_backupFotos)fotosPendentes=_backupFotos;
-      alert("PDF gerado com sucesso e baixado no celular!"+msgPerm);
+      alert("PDF gerado com sucesso e baixado no celular!"+detalhe);
       return; // sai sem limpar a sessão; o finally reabilita o botão
     }
 
@@ -6995,8 +7075,12 @@ function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
   pdf.text("1.0 INFORMAÇÕES GERAIS",ML,y);y+=6;
   const id=v.identificacao||{};
   const sp=id.servicosPublicos||{};
-  const ocupSel=(v.ocupacao||"").toLowerCase();
-  const zoneSel=(id.zoneamento||"").toLowerCase();
+  // Normalização sem acento — o select da Nova Vistoria usa "Servicos", "Terrea", "Galpao"
+  // SEM acento, mas mostramos com acento no PDF. Pra comparar/marcar com [X], removemos
+  // acentos dos dois lados antes de comparar.
+  const _semAcento=s=>(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const ocupSel=_semAcento(v.ocupacao);
+  const zoneSel=_semAcento(id.zoneamento);
   const colW=CW/3;
   // Cabeçalho da tabela (linha cinza claro)
   const cabH=7;
@@ -7032,14 +7116,14 @@ function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
   const ocupOpcoes=["Residencial","Comercial","Industrial","Institucional","Religioso","Serviços","Outros"];
   yi=y+5;
   ocupOpcoes.forEach(opt=>{
-    const marc=opt.toLowerCase()===ocupSel;
+    const marc=_semAcento(opt)===ocupSel;
     pdf.text((marc?"[X] ":"[ ] ")+opt,ML+colW+3,yi);yi+=5;
   });
   // Coluna 3: zoneamento
   const zoneOpcoes=["Residencial","Comercial","Industrial","Misto"];
   yi=y+5;
   zoneOpcoes.forEach(opt=>{
-    const marc=opt.toLowerCase()===zoneSel;
+    const marc=_semAcento(opt)===zoneSel;
     pdf.text((marc?"[X] ":"[ ] ")+opt,ML+2*colW+3,yi);yi+=5;
   });
   y+=altInfo+6;
@@ -7052,15 +7136,18 @@ function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
   const _mp=id.materiais&&id.materiais.paredes;
   const coberArr=Array.isArray(_mc)?_mc:(_mc?[String(_mc)]:[]);
   const parArr=Array.isArray(_mp)?_mp:(_mp?[String(_mp)]:[]);
-  const tipoSel=(v.tipo||"").toLowerCase();
-  const garagSel=(id.garagem||"").toLowerCase();
-  const estadoSel=(v.estado||"").toLowerCase();
-  // Helper: renderiza opções inline com [X]/[  ] e item destacado
+  // Normalização: usar _semAcento já declarado lá em cima.
+  const tipoSel=_semAcento(v.tipo);
+  const garagSel=_semAcento(id.garagem);
+  const estadoSel=_semAcento(v.estado);
+  // Helper: renderiza opções inline com [X]/[  ] e item destacado.
+  // Usa _semAcento pra comparar — o select do form tem "Terrea/Galpao" sem acento,
+  // mas o PDF mostra com acento.
   const coluna1W=CW*0.35;
   const renderOpcoes=(opcoes,sel,x,yy)=>{
     let xT=x;
     opcoes.forEach(t=>{
-      const m=t.toLowerCase()===sel;
+      const m=_semAcento(t)===sel;
       const lab=(m?"[X] ":"[ ] ")+t;
       pdf.text(lab,xT,yy);
       xT+=pdf.getTextWidth(lab)+4;
@@ -7159,7 +7246,7 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
   let y=_pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW);
   const r=v.responsavel||{};
   const e=v.endereco||{};
-  const enderecoFmt=[e.rua,e.num?"nº "+e.num:"",e.bairro,e.cidade||"São Paulo",e.uf||"SP",e.cep].filter(Boolean).join(" – ");
+  const enderecoFmt=[e.rua,e.num?"nº "+e.num:"",e.comp,e.bairro,e.cidade||"São Paulo",e.uf||"SP",e.cep].filter(Boolean).join(" – ");
   pdf.setFont("helvetica","bold");pdf.setFontSize(11);
   pdf.text("1. DADOS",ML,y);y+=7;
   pdf.setFont("helvetica","bold");pdf.setFontSize(10);
