@@ -6252,6 +6252,36 @@ window.finalizarVistoria=async()=>{
       data:{...vDoc,id:null},
       criadoEmTs:Date.now()
     };
+
+    // ========== GRAVAÇÃO NO FIRESTORE — LOGO APÓS O DOWNLOAD DO PDF ==========
+    // ORDEM IMPORTANTE: PDF baixou → grava no Firestore JÁ (antes do ZIP).
+    // Motivo: em mobile, depois do download, o navegador pode abrir o visualizador de PDF
+    // (Drive, Files, Chrome) que SUSPENDE a aba original. Se a gravação ficasse só depois
+    // do ZIP (que pode demorar 5-10s), a aba seria suspensa antes e o "client terminated"
+    // dispararia ao tentar gravar. Gravando agora, antes do ZIP, escapamos disso.
+    setStatus("Salvando vistoria...");
+    let vRef=null;
+    let erroPersistencia=null;
+    try{
+      if(currentVistoria._retornoId){
+        const docRef=doc(db,"vistorias",currentVistoria._retornoId);
+        const{criadoEm,...vDocUpd}=vDoc;
+        vDocUpd.atualizadoEm=serverTimestamp();
+        await updateDoc(docRef,vDocUpd);
+        vRef={id:currentVistoria._retornoId};
+      } else {
+        vRef=await addDoc(collection(db,"vistorias"),vDoc);
+      }
+      // Sucesso: atualiza o objeto temporário com o ID gerado
+      if(vRef&&vRef.id&&window._ultimaVistoriaFinalizada){
+        window._ultimaVistoriaFinalizada.id=vRef.id;
+        if(window._ultimaVistoriaFinalizada.data)window._ultimaVistoriaFinalizada.data.id=vRef.id;
+      }
+    }catch(ePersist){
+      console.error("Falha ao gravar vistoria no Firestore:",ePersist);
+      erroPersistencia=ePersist;
+    }
+
     // Restaurar fotos originais (qualidade máxima) ANTES do ZIP — a recompressão só serve para o PDF
     fotosPendentes=_backupFotos;
 
@@ -6267,29 +6297,8 @@ window.finalizarVistoria=async()=>{
       }catch(e){console.error("ZIP:",e);}
     }
 
-    // ===== AGORA SIM: persistência. Falhas aqui NÃO impedem o PDF (que já saiu). =====
-    setStatus("Salvando...");
-    let vRef=null;
-    let erroPersistencia=null;
-    try{
-      // RETOMADA DE PENDENTE: se a vistoria veio de um pendente_retorno, atualiza o doc
-      // original em vez de criar um novo. Isso preserva o histórico de visitas.
-      if(currentVistoria._retornoId){
-        const docRef=doc(db,"vistorias",currentVistoria._retornoId);
-        const{criadoEm,...vDocUpd}=vDoc;
-        vDocUpd.atualizadoEm=serverTimestamp();
-        await updateDoc(docRef,vDocUpd);
-        vRef={id:currentVistoria._retornoId};
-      } else {
-        vRef=await addDoc(collection(db,"vistorias"),vDoc);
-      }
-    }catch(ePersist){
-      console.error("Falha ao gravar vistoria no Firestore:",ePersist);
-      erroPersistencia=ePersist;
-    }
-
-    // Salvar fotos local-only (IndexedDB) — só se conseguimos um ID. Usa _backupFotos
-    // (qualidade original) com a mesma numeração/ordem do PDF.
+    // Salvar fotos local-only (IndexedDB) — só se conseguimos um ID na gravação anterior.
+    // Usa _backupFotos (qualidade original) com a mesma numeração/ordem do PDF.
     if(vRef&&vRef.id){
       try{
         const fonteFotos=(_backupFotos&&Object.keys(_backupFotos).length)?_backupFotos:fotosPendentes;
@@ -6298,8 +6307,8 @@ window.finalizarVistoria=async()=>{
       }catch(eLocal){console.error("Falha ao salvar fotos local-only:",eLocal);}
     }
 
-    // Se a gravação no Firestore falhou, avisa MAS não perde o trabalho: o PDF e o ZIP
-    // já foram baixados, e a sessão é mantida pra nova tentativa de salvar.
+    // Se a gravação no Firestore (feita antes do ZIP) falhou, avisa MAS não perde o trabalho:
+    // o PDF e o ZIP já foram baixados, e a sessão é mantida pra nova tentativa de salvar.
     if(erroPersistencia){
       const msgPerm=(erroPersistencia.code==="permission-denied"||/insufficient permissions/i.test(erroPersistencia.message||""))
         ?"\n\n⚠️ Seu usuário está sem permissão para salvar no servidor. O PDF e as fotos JÁ foram baixados no celular — guarde-os. Avise o administrador para verificar seu cadastro (peça para sair e entrar novamente no app)."
