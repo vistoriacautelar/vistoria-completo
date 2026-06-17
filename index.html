@@ -781,7 +781,7 @@ const LOGO_CONST="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgc
 
 import{initializeApp,deleteApp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import{getAuth,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,onAuthStateChanged,updatePassword,sendPasswordResetEmail}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import{getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,setDoc,getDoc,getDocs,addDoc,query,where,orderBy,serverTimestamp,deleteDoc,updateDoc,runTransaction}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import{getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,persistentSingleTabManager,collection,doc,setDoc,getDoc,getDocs,addDoc,query,where,orderBy,serverTimestamp,deleteDoc,updateDoc,runTransaction}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import{getStorage,ref as storageRef,uploadBytes,getDownloadURL,deleteObject}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 const FC={apiKey:"AIzaSyBTMAjVM7551eCoNK9Dcu98RrAzT2gghVE",authDomain:"vistoria-cautelar-completo.firebaseapp.com",projectId:"vistoria-cautelar-completo",storageBucket:"vistoria-cautelar-completo.firebasestorage.app",messagingSenderId:"488480360690",appId:"1:488480360690:web:b81dd653b105fa430c686b"};
@@ -793,11 +793,23 @@ const auth=getAuth(fbApp);
 // falhar (navegador sem suporte, modo privado etc.), cai pro getFirestore padrão — o app
 // continua funcionando, só sem o cache offline do banco.
 let db;
+// Cascata de inicialização: tenta a melhor opção primeiro, cai pra alternativas mais
+// conservadoras se algo falhar. Em todos os casos o app funciona — só muda se tem cache
+// offline ou se é sensível a múltiplas abas.
 try{
+  // Opção 1: multi-tab. Funciona bem em uso normal mas pode "terminate" cliente quando
+  // o usuário abre o app em várias abas/janelas durante uma vistoria.
   db=initializeFirestore(fbApp,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
-}catch(e){
-  console.warn("[Firestore] persistência offline indisponível, usando modo padrão:",e);
-  db=getFirestore(fbApp);
+}catch(e1){
+  console.warn("[Firestore] multi-tab indisponível, tentando single-tab com forceOwnership:",e1);
+  try{
+    // Opção 2: single-tab com forceOwnership=true. Mais robusto contra "client terminated"
+    // porque a aba atual sempre vence (derruba a outra), evitando race condition.
+    db=initializeFirestore(fbApp,{localCache:persistentLocalCache({tabManager:persistentSingleTabManager({forceOwnership:true})})});
+  }catch(e2){
+    console.warn("[Firestore] persistência offline indisponível, usando modo padrão:",e2);
+    db=getFirestore(fbApp);
+  }
 }
 const fbStorage=getStorage(fbApp);
 
@@ -834,7 +846,7 @@ const PATOLOGIAS_AL=[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},
     {n:5,t:"Infiltração"},{n:6,t:"Danificado"},{n:7,t:"Segregação"},{n:8,t:"Armadura Exposta"}
   ]},
-  {cod:"B",nome:"Paredes / Muros",subs:[
+  {cod:"B",nome:"Parede",subs:[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},{n:6,t:"Danificado"}
   ]},
   {cod:"C",nome:"Teto",subs:[
@@ -859,7 +871,7 @@ const PATOLOGIAS_AL=[
   {cod:"G",nome:"Pintura",subs:[
     {n:1,t:"Fissuras"},{n:2,t:"Danificado"},{n:3,t:"Eflorescência"},{n:4,t:"Desplacamento"}
   ]},
-  {cod:"H",nome:"Piso / Pavimento",subs:[
+  {cod:"H",nome:"Piso",subs:[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},
     {n:5,t:"Danificado"},{n:6,t:"Recalque"},{n:7,t:"Solapamento"}
   ]},
@@ -4515,18 +4527,56 @@ window.multiSetasConcluir=()=>{
   // Coletar todas as combinações de todas as setas para checklist / legenda
   const todasCombos=[];
   _fotoSetasAcumuladas.forEach(s=>{(s.combinacoesArr||[s.combinacao]).forEach(c=>todasCombos.push(c));});
-  // Para o simplificado, montar array flat de patologias
+  // Montar array flat de patologias para popular o checklist da vistoria.
+  // Tanto no SIMPLIFICADO quanto no COMPLETO — agora também o completo popula o checklist,
+  // porque o comprovante e a tabela "Identificação de Patologias" leem dele.
   const pats=[];
-  if(tipoLaudo!=="completo"){
-    todasCombos.forEach(c=>{
-      if(c.pats)c.pats.forEach(p=>pats.push({col:c.col,tipo:c.parte,pat:p,elemento:c.elemento,combo:c}));
-    });
-  }
+  todasCombos.forEach(c=>{
+    if(c.modo==="completo"&&c.categoria&&c.subs){
+      // Modo completo: converte {categoria:"B", subs:[1,2]} em entradas {col, pat}
+      // singulares compatíveis com PATOLOGIAS_CK_MAP. Ex: subs [1,2] em B → Trinca, Fissura.
+      const col=_PATOLOGIA_AL_TO_COL[c.categoria];
+      if(!col)return;
+      const cat=PATOLOGIAS_AL_MAP[c.categoria];if(!cat)return;
+      c.subs.forEach(n=>{
+        const sub=cat.subs.find(x=>x.n===n);if(!sub)return;
+        // Singulariza: "Trincas"→"Trinca", "Fissuras"→"Fissura", etc.
+        // Necessário porque PATOLOGIAS_CK_MAP usa formas singulares pra agrupar.
+        const patSing=_singularizarPat(sub.t);
+        pats.push({col,tipo:cat.nome,pat:patSing,elemento:cat.nome,combo:c});
+      });
+    } else if(c.pats) {
+      // Modo simplificado / agrupada: formato antigo
+      c.pats.forEach(p=>pats.push({col:c.col,tipo:c.parte,pat:p,elemento:c.elemento,combo:c}));
+    }
+  });
   salvarFotoFinal(fotoAtualBlob,pats,todasCombos);
   // Limpar estado
   _fotoSetasAcumuladas=[];
   _fotoOriginalBlob=null;
 };
+
+// Mapeamento Categoria A-L do modo completo → coluna do checklist no comprovante.
+// As 5 colunas são: estrutura, paredes, cobertura, portas, piso.
+const _PATOLOGIA_AL_TO_COL={
+  A:"estrutura", E:"estrutura",                         // Estruturas, Estr. Metálicas
+  B:"paredes", D:"paredes", G:"paredes",                // Parede, Revestimento, Pintura
+  C:"cobertura", M:"cobertura", J:"cobertura",          // Teto, Forro, Telhados
+  F:"portas", I:"portas", N:"portas",                   // Vidros, Portas, Esquadrias
+  H:"piso",                                              // Piso
+  K:"piso", L:"piso"                                     // Inst. Hidráulicas, Outros — sem coluna ideal
+};
+
+// Singulariza nome de patologia pra casar com PATOLOGIAS_CK_MAP.
+// PATOLOGIAS_CK_MAP usa "Fissura", "Trinca", "Rachadura" (singulares); o modo completo
+// tem "Fissuras", "Trincas", "Rachaduras" (plurais). Faz a conversão das 3 que importam.
+function _singularizarPat(s){
+  if(!s)return s;
+  if(s==="Trincas")return"Trinca";
+  if(s==="Fissuras")return"Fissura";
+  if(s==="Rachaduras")return"Rachadura";
+  return s;
+}
 
 // Renderiza a foto ORIGINAL com todas as setas/caixas acumuladas.
 // No modo completo, adiciona a caixa vermelha com código (B1, H1;3) próxima à seta.
@@ -5666,6 +5716,16 @@ window.enviarComprovanteVistoria=async(vistoriaId,vData,ev)=>{
         fotosLocais.forEach(f=>{if(f&&f.ambiente&&ambComPat.has(f.ambiente)&&!ambUtilizados.includes(f.ambiente))ambUtilizados.push(f.ambiente);});
       }
     }catch(e){}
+    // Fallback: se as fotos locais não permitiram detectar patologias (ex: fotos sumiram
+    // do IndexedDB depois da finalização), usa o checklist gravado em vData. Cada chave do
+    // checklist é um ambiente onde foi marcada alguma patologia.
+    if(!ambUtilizados.length&&vData.checklist){
+      Object.keys(vData.checklist).forEach(amb=>{
+        const elementos=vData.checklist[amb]||{};
+        const temPat=Object.values(elementos).some(arr=>Array.isArray(arr)&&arr.length>0);
+        if(temPat&&!ambUtilizados.includes(amb))ambUtilizados.push(amb);
+      });
+    }
     if(btn)btn.textContent="Gerando PDF...";
     blobGerado=await gerarComprovanteBlob(vData,conclusaoLinhas,assinaturaResp,assinaturaTec,vData.ambientesExtras||[],ambUtilizados);
     // SEMPRE baixar o PDF local PRIMEIRO — assim o cadastrador tem o arquivo no celular
@@ -6289,6 +6349,15 @@ window.finalizarVistoria=async()=>{
     // Mensagem detalhada pra diagnóstico no celular (sem precisar de DevTools)
     const detalhe=(e&&e.message)||(e&&e.code)||(e&&e.toString())||"desconhecido";
     const stackResumido=(e&&e.stack)?e.stack.split("\n").slice(0,3).join(" | "):"";
+    // ERRO ESPECÍFICO: "client has already been terminated".
+    // Acontece quando o Firestore foi terminado (outra aba abriu o app, ou navegador suspendeu).
+    // Único caminho de recuperação é recarregar a página. Mostra alerta dedicado.
+    if(/terminated/i.test(detalhe)){
+      if(confirm("⚠️ Conexão com o banco de dados foi perdida (outra aba do app pode estar aberta).\n\nClique OK para recarregar e tentar novamente.\n\nO PDF já foi baixado e a vistoria continua na fila de pendentes — nada foi perdido.")){
+        location.reload();
+      }
+      return;
+    }
     // Se o PDF já tinha sido gerado antes do erro, mostra banner de sucesso parcial
     // pra usuário não perder a vistoria.
     if(window._ultimaVistoriaFinalizada){
@@ -6999,59 +7068,71 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
   // ===== PÁGINA 3 — METODOLOGIA + ANÁLISE =====
   pdf.addPage();
   y=_pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW);
-  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("4. METODOLOGIA:",ML,y);y+=6;
-  y=_pdfTextoBloco(pdf,"Conforme disposto na Norma 12722-1992 da ABNT – Associação Brasileira de Normas Técnicas, Item 4.1.10, para a construção da edificação, registra-se o estado de conservação atual e as eventuais anomalias das construções dos imóveis, resguardando a responsabilidade de eventuais danos que possam ocorrer devido a construção.",ML+4,y,CW-4,9.5,4.5);
-  y+=2;
-  y=_pdfTextoBloco(pdf,"A constatação das anomalias e estado de conservação do imóvel será feita visualmente e registrada através de fotografias.",ML+4,y,CW-4,9.5,4.5);
-  y+=2;
-  y=_pdfTextoBloco(pdf,"Alguns tipos de anomalias, conforme a descrição a seguir:",ML+4,y,CW-4,9.5,4.5,true);
-  y+=2;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("4. METODOLOGIA:",ML,y);y+=9;
+  y=_pdfTextoBloco(pdf,"Conforme disposto na Norma 12722-1992 da ABNT – Associação Brasileira de Normas Técnicas, Item 4.1.10, para a construção da edificação, registra-se o estado de conservação atual e as eventuais anomalias das construções dos imóveis, resguardando a responsabilidade de eventuais danos que possam ocorrer devido a construção.",ML+4,y,CW-4,9.5,5);
+  y+=6;
+  y=_pdfTextoBloco(pdf,"A constatação das anomalias e estado de conservação do imóvel será feita visualmente e registrada através de fotografias.",ML+4,y,CW-4,9.5,5);
+  y+=8;
+  y=_pdfTextoBloco(pdf,"Alguns tipos de anomalias, conforme a descrição a seguir:",ML+4,y,CW-4,9.5,5,true);
+  y+=6;
   const tiposAnom=[
     ["TRINCA","Espessura de 1,5 mm (massa ou alvenaria)."],
     ["RACHADURA FACE A FACE","Espessura de 1,0 à 1,5 mm (transpassando a alvenaria)."],
     ["MANCHA DE UMIDADE / INFILTRAÇÃO","Espessura de 1,5 mm (massa ou alvenaria, sem divisão em partes)."],
-    ["FENDA","Espessura de mais de 1,5 mm (massa ou alvenaria, causando divisão em partes)."]
+    ["FENDA","Espessura de mais de 1,5 mm (massa ou alvenaria, causando divisão em partes).",]
   ];
   tiposAnom.forEach(([titulo,desc])=>{
-    pdf.setFont("helvetica","bold");pdf.setFontSize(9);
-    pdf.text(titulo,ML+4,y);y+=4;
+    pdf.setFont("helvetica","bold");pdf.setFontSize(9.5);
+    pdf.text(titulo,ML+4,y);y+=5;
     pdf.setFont("helvetica","normal");
-    y=_pdfTextoBloco(pdf,"- "+desc,ML+8,y,CW-12,9,4.2);
-    y+=1;
+    y=_pdfTextoBloco(pdf,"- "+desc,ML+8,y,CW-12,9.5,5);
+    y+=4; // espaço maior entre tipos
   });
-  y+=3;
-  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("5. ANÁLISE DAS ANOMALIAS:",ML,y);y+=6;
-  y=_pdfTextoBloco(pdf,"As origens das anomalias podem ter suas causas relacionadas a vários fatores, que podem ser definidos como segue:",ML+4,y,CW-4,9.5,4.5);
-  y+=2;
-  const itemsAnal=[
-    "• FISSURAS, TRINCAS E RACHADURAS: Prováveis fatores: variações de temperaturas.",
-    "• VARIAÇÕES DIFERENCIADAS DO TEOR DE UMIDADE DOS MATERIAIS POROSOS: Prováveis fatores: movimentações higroscópicas, atuação de sobrecargas, deformidade excessiva das estruturas de concreto armado, recalques diferenciais das fundações, alterações químicas dos materiais de construção.",
-    "• ALTERAÇÕES QUÍMICAS DOS MATERIAIS DE CONSTRUÇÃO: Prováveis fatores: deficiência na execução do encunhamento das paredes de vedação com os componentes estruturais, falta ou deficiência de vergas e contra-vergas nas portas e janelas.",
-    "• EMPOLAMENTO DO REVESTIMENTO: Prováveis fatores: deslocamento de argamassa por carbonatação.",
-    "• PINTURA DECOMPOSTA: Prováveis fatores: decomposição da pintura em paredes e forros de uma edificação se deve pela atuação da umidade excessiva na pintura.",
-    "• MANCHA DE UMIDADE: Prováveis fatores: falta e/ou falha de impermeabilização de áreas a céu aberto ou falta e/ou falha de rejuntamento ou calefação do revestimento externo, deficiência de vedação de caixilhos das janelas e por defeitos nas instalações hidro-sanitárias."
+  y+=8;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("5. ANÁLISE DAS ANOMALIAS:",ML,y);y+=9;
+  y=_pdfTextoBloco(pdf,"As origens das anomalias podem ter suas causas relacionadas a vários fatores, que podem ser definidos como segue:",ML+4,y,CW-4,9.5,5);
+  y+=6;
+  // Cada item tem TÍTULO em negrito + descrição em normal, separados por ":" e quebrando linha.
+  // Espaçamento extra entre itens facilita leitura visual.
+  const itemsAnalP3=[
+    ["FISSURAS, TRINCAS E RACHADURAS","Prováveis fatores: variações de temperaturas."],
+    ["VARIAÇÕES DIFERENCIADAS DO TEOR DE UMIDADE DOS MATERIAIS POROSOS","Prováveis fatores: movimentações higroscópicas, atuação de sobrecargas, deformidade excessiva das estruturas de concreto armado, recalques diferenciais das fundações, alterações químicas dos materiais de construção."],
+    ["ALTERAÇÕES QUÍMICAS DOS MATERIAIS DE CONSTRUÇÃO","Prováveis fatores: deficiência na execução do encunhamento das paredes de vedação com os componentes estruturais, falta ou deficiência de vergas e contra-vergas nas portas e janelas."],
+    ["EMPOLAMENTO DO REVESTIMENTO","Prováveis fatores: deslocamento de argamassa por carbonatação."],
+    ["PINTURA DECOMPOSTA","Prováveis fatores: decomposição da pintura em paredes e forros de uma edificação se deve pela atuação da umidade excessiva na pintura."],
+    ["MANCHA DE UMIDADE","Prováveis fatores: falta e/ou falha de impermeabilização de áreas a céu aberto ou falta e/ou falha de rejuntamento ou calefação do revestimento externo, deficiência de vedação de caixilhos das janelas e por defeitos nas instalações hidro-sanitárias."]
   ];
-  itemsAnal.forEach(it=>{
-    y=_pdfGarantirEspaco(pdf,y,12,PH,MB,MT);
-    y=_pdfTextoBloco(pdf,it,ML+4,y,CW-4,9,4.2);
-    y+=1.5;
+  itemsAnalP3.forEach(([titulo,desc])=>{
+    y=_pdfGarantirEspaco(pdf,y,15,PH,MB,MT);
+    pdf.setFont("helvetica","bold");pdf.setFontSize(9.5);
+    pdf.text("• "+titulo,ML+4,y);y+=5;
+    pdf.setFont("helvetica","normal");
+    y=_pdfTextoBloco(pdf,desc,ML+9,y,CW-9,9.5,5);
+    y+=4; // espaço entre cada item
   });
   _pdfRodapeCompleto(pdf,prest,PW,PH,ML,MR,MB,3,"X");
 
   // ===== PÁGINA 4 — ANÁLISE (continuação) + LISTA + AVALIAÇÃO + CONCLUSÃO =====
   pdf.addPage();
   y=_pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW);
+  // Itens da Análise (continuação) — mesmo formato da pág 3: título em negrito + descrição
   const itemsAnal2=[
-    "• DESPRENDIMENTO DE PISOS CERÂMICOS: Prováveis fatores: assentamento deficiente destas peças; quanto ao tipo de argamassa utilizada para assentamento; pela falta de espaçamento suficiente entre as peças para uma regular movimentação destas (contração e dilatação) quando da incidência de variações de temperatura bruscas; e, quando da deformação excessiva dos componentes estruturais.",
-    "• DESAGREGAÇÃO DA ARGAMASSA DO REVESTIMENTO: Prováveis fatores: oxidação da ferragem das lajes, vigas e pilares em razão da deficiência do cobrimento, da porosidade do concreto, pelas infiltrações excessivas de água, que propiciam o ataque de cloretos ou gás carbônico na ferrugem.",
-    "• DESTACAMENTO DAS PLACAS DE GESSO: Prováveis fatores: este destacamento, via de regra, é proveniente da incidência de umidade, da execução do atirantamento inadequado e pela ausência da aplicação de massa corrida e fundo preparador sobre o mesmo."
+    ["DESPRENDIMENTO DE PISOS CERÂMICOS","Prováveis fatores: assentamento deficiente destas peças; quanto ao tipo de argamassa utilizada para assentamento; pela falta de espaçamento suficiente entre as peças para uma regular movimentação destas (contração e dilatação) quando da incidência de variações de temperatura bruscas; e, quando da deformação excessiva dos componentes estruturais."],
+    ["DESAGREGAÇÃO DA ARGAMASSA DO REVESTIMENTO","Prováveis fatores: oxidação da ferragem das lajes, vigas e pilares em razão da deficiência do cobrimento, da porosidade do concreto, pelas infiltrações excessivas de água, que propiciam o ataque de cloretos ou gás carbônico na ferrugem."],
+    ["DESTACAMENTO DAS PLACAS DE GESSO","Prováveis fatores: este destacamento, via de regra, é proveniente da incidência de umidade, da execução do atirantamento inadequado e pela ausência da aplicação de massa corrida e fundo preparador sobre o mesmo."]
   ];
-  itemsAnal2.forEach(it=>{y=_pdfTextoBloco(pdf,it,ML+4,y,CW-4,9.5,4.5);y+=4;});
-  y+=8;
-  pdf.setFont("helvetica","bold");pdf.setFontSize(11);
-  pdf.text("6. LISTA DE VERIFICAÇÃO DOS ELEMENTOS CONSTRUTIVOS",ML,y);y+=8;
-  y=_pdfTextoBloco(pdf,"Para auxiliar a anotação das não conformidades foi utilizada uma lista de verificação (check-list), com base nas orientações da Norma Nacional de Inspeção Predial, levando em consideração a tipologia, padrão e as manifestações patológicas esperadas.",ML+4,y,CW-4,9.5,4.5);
+  itemsAnal2.forEach(([titulo,desc])=>{
+    pdf.setFont("helvetica","bold");pdf.setFontSize(9.5);
+    pdf.text("• "+titulo,ML+4,y);y+=5;
+    pdf.setFont("helvetica","normal");
+    y=_pdfTextoBloco(pdf,desc,ML+9,y,CW-9,9.5,5);
+    y+=5;
+  });
   y+=10;
+  pdf.setFont("helvetica","bold");pdf.setFontSize(11);
+  pdf.text("6. LISTA DE VERIFICAÇÃO DOS ELEMENTOS CONSTRUTIVOS",ML,y);y+=9;
+  y=_pdfTextoBloco(pdf,"Para auxiliar a anotação das não conformidades foi utilizada uma lista de verificação (check-list), com base nas orientações da Norma Nacional de Inspeção Predial, levando em consideração a tipologia, padrão e as manifestações patológicas esperadas.",ML+4,y,CW-4,9.5,5);
+  y+=12;
   // AVALIAÇÃO
   pdf.setFont("helvetica","bold");pdf.setFontSize(11);pdf.text("7. AVALIAÇÃO DO IMÓVEL",ML,y);y+=8;
   y=_pdfTextoBloco(pdf,"A manutenção é avaliada como: CONFORME, NÃO CONFORME ou NÃO SE APLICA.",ML+4,y,CW-4,9.5,4.5);
