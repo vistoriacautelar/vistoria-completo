@@ -402,7 +402,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;
           <option value="Não tem">Não tem</option>
         </select>
       </div>
-      <div class="field"><label>Número de pavimentos</label>
+      <div class="field"><label>Número de pavimentos <span style="color:#dc2626">*</span></label>
         <input type="number" id="id-pavimentos" placeholder="Ex: 1, 2, 3..." min="1" max="50" inputmode="numeric">
       </div>
     </div>
@@ -785,7 +785,7 @@ const LOGO_CONST="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgc
 
 import{initializeApp,deleteApp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import{getAuth,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,onAuthStateChanged,updatePassword,sendPasswordResetEmail}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import{getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,persistentSingleTabManager,collection,doc,setDoc,getDoc,getDocs,addDoc,query,where,orderBy,serverTimestamp,deleteDoc,updateDoc,runTransaction}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import{getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,persistentSingleTabManager,collection,doc,setDoc,getDoc,getDocs,getDocsFromServer,addDoc,query,where,orderBy,serverTimestamp,deleteDoc,updateDoc,runTransaction}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import{getStorage,ref as storageRef,uploadBytes,getDownloadURL,deleteObject}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 const FC={apiKey:"AIzaSyBTMAjVM7551eCoNK9Dcu98RrAzT2gghVE",authDomain:"vistoria-cautelar-completo.firebaseapp.com",projectId:"vistoria-cautelar-completo",storageBucket:"vistoria-cautelar-completo.firebasestorage.app",messagingSenderId:"488480360690",appId:"1:488480360690:web:b81dd653b105fa430c686b"};
@@ -845,25 +845,28 @@ const ELEMENTO_TO_COL={
 // ===== LAUDO COMPLETO: 12 categorias com subitens (cada patologia é um item separado) =====
 // Importante: o "cod" interno (A-L) permanece para mapear o checklist automático,
 // mas NUNCA é exibido na interface ou no PDF (decisão de UX: cliente vê apenas descrições).
+// PATOLOGIAS_AL — categorias do laudo completo.
+// Mudança importante: Pintura (G) e Revestimento (D) foram ELIMINADAS como categorias
+// próprias. Suas patologias (Eflorescência, Desplacamento) foram REDISTRIBUÍDAS dentro de
+// Parede, Teto, Forro e Piso — porque pintura/revestimento são acabamentos, não elementos
+// construtivos. O leitor do laudo precisa saber ONDE está o desplacamento (parede? teto?),
+// não APENAS que é "pintura".
 const PATOLOGIAS_AL=[
   {cod:"A",nome:"Estruturas",subs:[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},
     {n:5,t:"Infiltração"},{n:6,t:"Danificado"},{n:7,t:"Segregação"},{n:8,t:"Armadura Exposta"}
   ]},
   {cod:"B",nome:"Parede",subs:[
-    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},{n:6,t:"Danificado"}
+    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},
+    {n:6,t:"Danificado"},{n:7,t:"Eflorescência"},{n:8,t:"Desplacamento"}
   ]},
   {cod:"C",nome:"Teto",subs:[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},
-    {n:6,t:"Danificado"},{n:7,t:"Eflorescência"}
+    {n:6,t:"Danificado"},{n:7,t:"Eflorescência"},{n:8,t:"Desplacamento"}
   ]},
   {cod:"M",nome:"Forro",subs:[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},
-    {n:6,t:"Danificado"},{n:7,t:"Deformado"}
-  ]},
-  {cod:"D",nome:"Revestimento",subs:[
-    {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},{n:5,t:"Infiltração"},
-    {n:6,t:"Danificado"},{n:7,t:"Eflorescência"},{n:8,t:"Desplacamento"}
+    {n:6,t:"Danificado"},{n:7,t:"Deformado"},{n:8,t:"Desplacamento"}
   ]},
   {cod:"E",nome:"Estr. Metálicas",subs:[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Oxidação"},
@@ -872,12 +875,10 @@ const PATOLOGIAS_AL=[
   {cod:"F",nome:"Vidros",subs:[
     {n:1,t:"Trincado"},{n:2,t:"Quebrado"},{n:3,t:"Faltando"}
   ]},
-  {cod:"G",nome:"Pintura",subs:[
-    {n:1,t:"Fissuras"},{n:2,t:"Danificado"},{n:3,t:"Eflorescência"},{n:4,t:"Desplacamento"}
-  ]},
   {cod:"H",nome:"Piso",subs:[
     {n:1,t:"Trincas"},{n:2,t:"Fissuras"},{n:3,t:"Rachaduras"},{n:4,t:"Umidade"},
-    {n:5,t:"Danificado"},{n:6,t:"Recalque"},{n:7,t:"Solapamento"}
+    {n:5,t:"Danificado"},{n:6,t:"Recalque"},{n:7,t:"Solapamento"},
+    {n:8,t:"Eflorescência"},{n:9,t:"Desplacamento"}
   ]},
   {cod:"I",nome:"Portas",subs:[
     {n:1,t:"Umidade"},{n:2,t:"Danificado"}
@@ -1967,7 +1968,13 @@ window.previewLogoUpload=e=>{const file=e.target.files[0];if(!file)return;const 
 
 function mkLI(av,title,sub,act){const d=document.createElement("div");d.className="list-item";d.innerHTML=av+'<div class="info"><div class="title">'+title+'</div><div class="sub">'+sub+'</div></div>'+act;return d;}
 
-async function loadPrestadores(){const snap=await getDocs(collection(db,"prestadores"));const el=document.getElementById("lista-prestadores");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum prestador</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));docs.forEach(p=>{const av=p.logo?'<div class="avatar" style="background:#fce7f3"><img src="'+p.logo+'" style="width:36px;height:36px;object-fit:contain;border-radius:50%"></div>':'<div class="avatar" style="background:#fce7f3;color:#9d174d">'+p.nome.charAt(0)+"</div>";const def=p.isDefault?'<span class="badge ok">Padrao</span>':'<button class="btn small" onclick="event.stopPropagation();setDefaultPrestador(\''+p.id+'\')" style="color:#007aff;border-color:#007aff;font-size:11px">Padrao</button>';const edit='<button class="btn small" onclick="event.stopPropagation();abrirEditarPrestador(\''+p.id+'\')" style="color:#374151;border-color:#9ca3af;font-size:11px">Editar</button>';const del='<button class="btn small danger" onclick="event.stopPropagation();deletarPrestador(\''+p.id+'\')">Excluir</button>';el.appendChild(mkLI(av,p.nome+(p.isDefault?" (Padrao)":""),p.cnpj||"","<div style='display:flex;gap:6px;flex-shrink:0'>"+def+edit+del+"</div>"));});}
+async function loadPrestadores(){
+  // Forçar fetch do servidor pra ver prestadores cadastrados no desktop também.
+  let snap;
+  try{snap=await getDocsFromServer(collection(db,"prestadores"));}
+  catch(e){console.warn("[prestadores] sem internet, usando cache:",e);snap=await getDocs(collection(db,"prestadores"));}
+  const el=document.getElementById("lista-prestadores");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum prestador</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));docs.forEach(p=>{const av=p.logo?'<div class="avatar" style="background:#fce7f3"><img src="'+p.logo+'" style="width:36px;height:36px;object-fit:contain;border-radius:50%"></div>':'<div class="avatar" style="background:#fce7f3;color:#9d174d">'+p.nome.charAt(0)+"</div>";const def=p.isDefault?'<span class="badge ok">Padrao</span>':'<button class="btn small" onclick="event.stopPropagation();setDefaultPrestador(\''+p.id+'\')" style="color:#007aff;border-color:#007aff;font-size:11px">Padrao</button>';const edit='<button class="btn small" onclick="event.stopPropagation();abrirEditarPrestador(\''+p.id+'\')" style="color:#374151;border-color:#9ca3af;font-size:11px">Editar</button>';const del='<button class="btn small danger" onclick="event.stopPropagation();deletarPrestador(\''+p.id+'\')">Excluir</button>';el.appendChild(mkLI(av,p.nome+(p.isDefault?" (Padrao)":""),p.cnpj||"","<div style='display:flex;gap:6px;flex-shrink:0'>"+def+edit+del+"</div>"));});
+}
 // Abre o modal de prestador em MODO EDIÇÃO, pre-populando os campos.
 // O salvarPrestador detecta se window._editandoPrestadorId está definido para
 // fazer UPDATE em vez de ADD.
@@ -2028,7 +2035,16 @@ window.salvarPrestador=async()=>{
 window.setDefaultPrestador=async id=>{const q=query(collection(db,"prestadores"),where("isDefault","==",true));const s=await getDocs(q);for(const d of s.docs)await updateDoc(doc(db,"prestadores",d.id),{isDefault:false});await updateDoc(doc(db,"prestadores",id),{isDefault:true});await loadPrestadorDefault();loadPrestadores();};
 window.deletarPrestador=async id=>{if(!confirm("Excluir?"))return;await deleteDoc(doc(db,"prestadores",id));loadPrestadores();};
 
-async function loadClientes(){const snap=await getDocs(collection(db,"clientes"));const el=document.getElementById("lista-clientes");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum cliente</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));docs.forEach(cl=>{const av='<div class="avatar" style="background:#ede9fe;color:#5b21b6">'+cl.nome.charAt(0)+"</div>";const edit='<button class="btn small" onclick="event.stopPropagation();abrirEditarCliente(\''+cl.id+'\')" style="color:#374151;border-color:#9ca3af;font-size:11px">Editar</button>';const del=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarCliente(\''+cl.id+'\')">Excluir</button>':'';const act=currentRole==="master"?"<div style='display:flex;gap:6px;flex-shrink:0'>"+edit+del+"</div>":'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';el.appendChild(mkLI(av,cl.nome,"RRT: "+cl.rrt,act));});}
+async function loadClientes(){
+  // IMPORTANTE: usa getDocsFromServer pra garantir que pega os dados ATUALIZADOS
+  // do servidor (e não do cache local). Sem isso, clientes/coletores cadastrados
+  // no desktop não apareciam no app mobile que tinha cache antigo.
+  // Em offline, faz fallback pro cache via getDocs.
+  let snap;
+  try{snap=await getDocsFromServer(collection(db,"clientes"));}
+  catch(e){console.warn("[clientes] sem internet, usando cache:",e);snap=await getDocs(collection(db,"clientes"));}
+  const el=document.getElementById("lista-clientes");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum cliente</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));docs.forEach(cl=>{const av='<div class="avatar" style="background:#ede9fe;color:#5b21b6">'+cl.nome.charAt(0)+"</div>";const edit='<button class="btn small" onclick="event.stopPropagation();abrirEditarCliente(\''+cl.id+'\')" style="color:#374151;border-color:#9ca3af;font-size:11px">Editar</button>';const del=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarCliente(\''+cl.id+'\')">Excluir</button>':'';const act=currentRole==="master"?"<div style='display:flex;gap:6px;flex-shrink:0'>"+edit+del+"</div>":'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';el.appendChild(mkLI(av,cl.nome,"RRT: "+cl.rrt,act));});
+}
 window.abrirEditarCliente=async id=>{
   try{
     const ds=await getDoc(doc(db,"clientes",id));
@@ -2064,7 +2080,13 @@ window.salvarCliente=async()=>{
 };
 window.deletarCliente=async id=>{if(!confirm("Excluir?"))return;await deleteDoc(doc(db,"clientes",id));loadClientes();};
 
-async function loadColetores(){const[snap,clSnap]=await Promise.all([getDocs(collection(db,"coletores")),getDocs(collection(db,"clientes"))]);const clMap={};clSnap.forEach(d=>clMap[d.id]=d.data().nome);const el=document.getElementById("lista-coletores");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum coletor</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>{const ca=clMap[a.clienteId]||"";const cb=clMap[b.clienteId]||"";return ca.localeCompare(cb,"pt-BR")||a.nome.localeCompare(b.nome,"pt-BR");});const grupos={};docs.forEach(col=>{const cn=clMap[col.clienteId]||"Sem cliente";if(!grupos[cn])grupos[cn]=[];grupos[cn].push(col);});Object.entries(grupos).forEach(([cname,cols])=>{const g=document.createElement("div");g.className="coletor-group";const t=document.createElement("div");t.className="coletor-group-title";t.textContent=cname;g.appendChild(t);cols.forEach(col=>{const av='<div class="avatar" style="background:#e0f2fe;color:#0369a1;font-size:11px">C</div>';const edit='<button class="btn small" onclick="event.stopPropagation();abrirEditarColetor(\''+col.id+'\')" style="color:#374151;border-color:#9ca3af;font-size:11px">Editar</button>';const del=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarColetor(\''+col.id+'\')">Excluir</button>':'';const act=currentRole==="master"?"<div style='display:flex;gap:6px;flex-shrink:0'>"+edit+del+"</div>":'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';g.appendChild(mkLI(av,col.nome,"",act));});el.appendChild(g);});}
+async function loadColetores(){
+  // IMPORTANTE: getDocsFromServer pra dados atualizados do desktop.
+  let snap,clSnap;
+  try{[snap,clSnap]=await Promise.all([getDocsFromServer(collection(db,"coletores")),getDocsFromServer(collection(db,"clientes"))]);}
+  catch(e){console.warn("[coletores] sem internet, usando cache:",e);[snap,clSnap]=await Promise.all([getDocs(collection(db,"coletores")),getDocs(collection(db,"clientes"))]);}
+  const clMap={};clSnap.forEach(d=>clMap[d.id]=d.data().nome);const el=document.getElementById("lista-coletores");el.innerHTML="";if(snap.size===0){el.innerHTML='<p style="text-align:center;color:#aaa;padding:32px">Nenhum coletor</p>';return;}const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));docs.sort((a,b)=>{const ca=clMap[a.clienteId]||"";const cb=clMap[b.clienteId]||"";return ca.localeCompare(cb,"pt-BR")||a.nome.localeCompare(b.nome,"pt-BR");});const grupos={};docs.forEach(col=>{const cn=clMap[col.clienteId]||"Sem cliente";if(!grupos[cn])grupos[cn]=[];grupos[cn].push(col);});Object.entries(grupos).forEach(([cname,cols])=>{const g=document.createElement("div");g.className="coletor-group";const t=document.createElement("div");t.className="coletor-group-title";t.textContent=cname;g.appendChild(t);cols.forEach(col=>{const av='<div class="avatar" style="background:#e0f2fe;color:#0369a1;font-size:11px">C</div>';const edit='<button class="btn small" onclick="event.stopPropagation();abrirEditarColetor(\''+col.id+'\')" style="color:#374151;border-color:#9ca3af;font-size:11px">Editar</button>';const del=currentRole==="master"?'<button class="btn small danger" onclick="event.stopPropagation();deletarColetor(\''+col.id+'\')">Excluir</button>':'';const act=currentRole==="master"?"<div style='display:flex;gap:6px;flex-shrink:0'>"+edit+del+"</div>":'<span style="color:#c7c7cc;font-size:20px">&#8250;</span>';g.appendChild(mkLI(av,col.nome,"",act));});el.appendChild(g);});
+}
 window.abrirEditarColetor=async id=>{
   try{
     const ds=await getDoc(doc(db,"coletores",id));
@@ -3176,9 +3198,11 @@ window.confirmarIdentificacao=()=>{
   if(!currentVistoria){alert("Sessão da vistoria foi perdida. Volte e reinicie.");return;}
   const cobArr=Array.from(document.querySelectorAll(".id-mat-cob:checked")).map(cb=>cb.value);
   const parArr=Array.from(document.querySelectorAll(".id-mat-par:checked")).map(cb=>cb.value);
-  // Validação: Cobertura e Paredes são obrigatórios (pelo menos 1 marcado em cada)
+  const pavimentos=(document.getElementById("id-pavimentos").value||"").trim();
+  // Validação: Cobertura, Paredes e Nº de Pavimentos são obrigatórios
   if(cobArr.length===0){alert("Selecione pelo menos uma opção em \"Cobertura\".");return;}
   if(parArr.length===0){alert("Selecione pelo menos uma opção em \"Paredes\".");return;}
+  if(!pavimentos){alert("Informe o Nº de Pavimentos.");document.getElementById("id-pavimentos").focus();return;}
   currentVistoria.identificacao={
     servicosPublicos:{
       energia:document.getElementById("id-sv-energia").checked,
@@ -4243,38 +4267,7 @@ function abrirModalPatologiasCompleto(){
 function renderSubitensCompleto(cod){
   const cat=PATOLOGIAS_AL_MAP[cod];
   const list=document.getElementById("pat-list");list.innerHTML="";
-  // Categorias D (Revestimento) e G (Pintura) podem estar em vários lugares —
-  // por isso ganham um seletor de "Local" no topo do modal. O cadastrador escolhe
-  // se a pintura/revestimento é de parede, teto ou esquadria. A legenda fica
-  // "Pintura (Parede): Desplacamento", muito mais informativa pro leitor do laudo.
-  // Categorias com locais possíveis. Local "" = não especificado (usuário pode escolher).
-  const PRECISA_LOCAL={D:["Parede","Teto","Esquadria"],G:["Parede","Teto","Esquadria"]};
-  const locaisPossiveis=PRECISA_LOCAL[cod];
-  if(locaisPossiveis){
-    const wrap=document.createElement("div");wrap.style.cssText="background:#f3f4f6;border-radius:8px;padding:10px;margin-bottom:10px";
-    const titulo=document.createElement("div");titulo.style.cssText="font-size:13px;font-weight:600;margin-bottom:8px;color:#374151";
-    titulo.textContent="Local da "+cat.nome.toLowerCase()+":";
-    wrap.appendChild(titulo);
-    const opts=document.createElement("div");opts.style.cssText="display:flex;gap:6px;flex-wrap:wrap";
-    locaisPossiveis.forEach(loc=>{
-      const btn=document.createElement("button");
-      btn.type="button";btn.dataset.local=loc;
-      btn.className="local-btn";
-      btn.style.cssText="padding:8px 14px;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:13px;cursor:pointer";
-      btn.textContent=loc;
-      btn.onclick=()=>{
-        document.querySelectorAll(".local-btn").forEach(b=>{b.style.background="#fff";b.style.color="#000";b.style.borderColor="#d1d5db";});
-        btn.style.background="#1d4ed8";btn.style.color="#fff";btn.style.borderColor="#1d4ed8";
-        window._patLocalSelecionado=loc;
-      };
-      opts.appendChild(btn);
-    });
-    wrap.appendChild(opts);
-    list.appendChild(wrap);
-    window._patLocalSelecionado=null;
-  } else {
-    window._patLocalSelecionado=null;
-  }
+  window._patLocalSelecionado=null;
   // Renderizar subitens
   cat.subs.forEach(s=>{
     const item=document.createElement("div");item.className="pat-item";
@@ -4290,20 +4283,12 @@ function renderSubitensCompleto(cod){
 window.adicionarCombinacao=()=>{
   const tipoLaudo=(currentVistoria&&currentVistoria.tipoLaudo)||"simplificado";
   if(tipoLaudo==="completo"){
-    if(!_patCatSelecionada)return alert("Selecione uma categoria (A–L)");
-    // Pintura (G) e Revestimento (D) exigem Local — sem isso a legenda fica ambígua.
-    const PRECISA_LOCAL={D:true,G:true};
-    if(PRECISA_LOCAL[_patCatSelecionada]&&!window._patLocalSelecionado){
-      return alert("Selecione o Local (Parede, Teto ou Esquadria).");
-    }
+    if(!_patCatSelecionada)return alert("Selecione uma categoria");
     const checkedSubs=Array.from(document.querySelectorAll("#pat-list input:checked")).map(cb=>parseInt(cb.value)).sort((a,b)=>a-b);
     if(!checkedSubs.length)return alert("Selecione ao menos um subitem");
     const cat=PATOLOGIAS_AL_MAP[_patCatSelecionada];
     const codigo=_patCatSelecionada+checkedSubs.join(";");
     const combo={modo:"completo",categoria:_patCatSelecionada,categoriaNome:cat.nome,subs:checkedSubs,codigo};
-    // Anexa o local se foi exigido (Pintura/Revestimento). Vai pra legenda como
-    // "Pintura (Parede): Desplacamento" — comunica claramente onde está o problema.
-    if(window._patLocalSelecionado)combo.local=window._patLocalSelecionado;
     _patCombinacoes.push(combo);
     // Limpar para próxima
     document.querySelectorAll("#part-grid .part-btn").forEach(b=>b.classList.remove("selected"));
@@ -4365,35 +4350,28 @@ function unificarLegendasCombos(combinacoes){
   if(!combinacoes||!combinacoes.length)return "";
   const temCompleto=combinacoes.some(c=>c.modo==="completo");
   if(temCompleto){
-    // Modo completo no MESMO formato do simplificado: "Categoria: pat1 / pat2".
-    // Quando a categoria tem LOCAL (Pintura/Revestimento), fica: "Pintura (Parede): pat1 / pat2".
-    // Múltiplas categorias separadas por " / " (ex: "Parede: Trincas / Pintura (Teto): Desplacamento").
-    // Mantém os plurais ("Trincas", "Fissuras", "Rachaduras") porque a categoria pode ter
-    // várias ocorrências da mesma patologia na foto.
+    // Modo completo no MESMO formato do simplificado: "Elemento: pat1 / pat2".
+    // Múltiplas categorias separadas por " / " (ex: "Parede: Trinca / Umidade / Piso: Danificado").
+    // Patologias SINGULARES (Trinca, Fissura, Rachadura) — igual ao simplificado. Mais natural
+    // pra leitura no laudo formal.
     // Exceção: categoria "Outros" (cod L) só mostra os subitens, sem o prefixo.
-    // IMPORTANTE: agrupamos por (categoria + local) — assim "Pintura (Parede)" e
-    // "Pintura (Teto)" são linhas separadas na legenda.
-    const ordemChave=[];
+    const ordemCat=[];
     const grupos={};
     combinacoes.forEach(c=>{
       if(c.modo!=="completo")return;
       const cat=PATOLOGIAS_AL_MAP[c.categoria];if(!cat)return;
-      const chave=c.categoria+(c.local?"|"+c.local:"");
-      if(!grupos[chave]){
-        grupos[chave]={subs:[],set:new Set(),nome:cat.nome,local:c.local||"",cod:c.categoria};
-        ordemChave.push(chave);
-      }
+      if(!grupos[c.categoria]){grupos[c.categoria]={subs:[],set:new Set(),nome:cat.nome,cod:c.categoria};ordemCat.push(c.categoria);}
       c.subs.forEach(n=>{
         const s=cat.subs.find(x=>x.n===n);if(!s)return;
-        if(!grupos[chave].set.has(s.t)){grupos[chave].set.add(s.t);grupos[chave].subs.push(s.t);}
+        const t=_singularizarPat(s.t);
+        if(!grupos[c.categoria].set.has(t)){grupos[c.categoria].set.add(t);grupos[c.categoria].subs.push(t);}
       });
     });
-    return ordemChave.map(chave=>{
-      const g=grupos[chave];
+    return ordemCat.map(cod=>{
+      const g=grupos[cod];
       const subStr=g.subs.join(" / ");
       if(g.cod==="L")return subStr; // "Outros" não recebe prefixo
-      const prefixo=g.nome+(g.local?" ("+g.local+")":"");
-      return prefixo+": "+subStr;
+      return g.nome+": "+subStr;
     }).join(" / ");
   }
   // Simplificado: agrupar por elemento, deduplicar patologias, preservar ordem
@@ -4490,10 +4468,12 @@ function gerarConclusaoAutomatica(){
 
 // Mapeamento (categoria interna A-N → linha do checklist do Anexo I).
 // Usado para preencher automaticamente a tabela "Especificação / Danos".
-// Agrupa as 14 categorias de patologia em 6 elementos construtivos padrão.
+// Agrupa as 12 categorias de patologia em 6 elementos construtivos padrão.
+// Note: D (Revestimento) e G (Pintura) foram eliminadas — suas patologias estão
+// distribuídas entre B/C/M/H, então não aparecem aqui.
 const _CHECKLIST_MAP={
   A:"Estruturas", E:"Estruturas",
-  B:"Paredes e Muros", D:"Paredes e Muros", G:"Paredes e Muros",
+  B:"Paredes e Muros",
   C:"Coberturas / Tetos", M:"Coberturas / Tetos", J:"Coberturas / Tetos",
   F:"Portas e Esquadrias", I:"Portas e Esquadrias", N:"Portas e Esquadrias",
   H:"Pisos e Calçamentos",
@@ -4667,25 +4647,29 @@ window.multiSetasConcluir=()=>{
   _fotoOriginalBlob=null;
 };
 
-// Mapeamento Categoria A-L do modo completo → coluna do checklist no comprovante.
+// Mapeamento Categoria A-N do modo completo → coluna do checklist no comprovante.
 // As 5 colunas são: estrutura, paredes, cobertura, portas, piso.
+// Note: D (Revestimento) e G (Pintura) foram eliminadas — suas patologias estão
+// agora dentro de B/C/M/H, então não aparecem aqui.
 const _PATOLOGIA_AL_TO_COL={
   A:"estrutura", E:"estrutura",                         // Estruturas, Estr. Metálicas
-  B:"paredes", D:"paredes", G:"paredes",                // Parede, Revestimento, Pintura
+  B:"paredes",                                           // Parede
   C:"cobertura", M:"cobertura", J:"cobertura",          // Teto, Forro, Telhados
   F:"portas", I:"portas", N:"portas",                   // Vidros, Portas, Esquadrias
   H:"piso",                                              // Piso
   K:"piso", L:"piso"                                     // Inst. Hidráulicas, Outros — sem coluna ideal
 };
 
-// Singulariza nome de patologia pra casar com PATOLOGIAS_CK_MAP.
-// PATOLOGIAS_CK_MAP usa "Fissura", "Trinca", "Rachadura" (singulares); o modo completo
-// tem "Fissuras", "Trincas", "Rachaduras" (plurais). Faz a conversão das 3 que importam.
+// Singulariza nome de patologia. As patologias do PATOLOGIAS_AL estão em formato
+// PLURAL ("Trincas", "Fissuras"), mas pra exibição (legendas, conclusão) usamos
+// SINGULAR — igual ao simplificado e padrão de redação técnica.
 function _singularizarPat(s){
   if(!s)return s;
   if(s==="Trincas")return"Trinca";
   if(s==="Fissuras")return"Fissura";
   if(s==="Rachaduras")return"Rachadura";
+  if(s==="Telhas Quebradas")return"Telha Quebrada";
+  if(s==="Telhas Faltando")return"Telha Faltando";
   return s;
 }
 
@@ -6380,22 +6364,25 @@ window.finalizarVistoria=async()=>{
     let vRef=null;
     let erroPersistencia=null;
     try{
-      // Timeout de 15s no Firestore — evita ficar pendurado pra sempre se o servidor
-      // não responder ou se o cliente foi terminado (multi-tab race condition).
-      // Se passar de 15s, joga erro pro catch — usuário recebe alert visível em vez
-      // de tela travada em "Salvando vistoria...".
-      const opPromise=currentVistoria._retornoId
-        ? (async()=>{
-            const docRef=doc(db,"vistorias",currentVistoria._retornoId);
-            const{criadoEm,...vDocUpd}=vDoc;
-            vDocUpd.atualizadoEm=serverTimestamp();
-            await updateDoc(docRef,vDocUpd);
-            return {id:currentVistoria._retornoId};
-          })()
-        : addDoc(collection(db,"vistorias"),vDoc);
+      // Timeout de 30s (era 15s). 30s é generoso o suficiente pra cobrir conexões 3G
+      // ruins e ainda dar feedback ao usuário caso algo trave de vez.
+      // Estratégia: usa setDoc com ID pré-gerado em vez de addDoc. Isso permite RETENTAR
+      // a gravação sem duplicar o documento, caso a primeira tentativa falhe.
+      const docId=currentVistoria._retornoId||doc(collection(db,"vistorias")).id;
+      const docRef=doc(db,"vistorias",docId);
+      const opPromise=(async()=>{
+        if(currentVistoria._retornoId){
+          const{criadoEm,...vDocUpd}=vDoc;
+          vDocUpd.atualizadoEm=serverTimestamp();
+          await updateDoc(docRef,vDocUpd);
+        } else {
+          await setDoc(docRef,vDoc);
+        }
+        return {id:docId};
+      })();
       vRef=await Promise.race([
         opPromise,
-        new Promise((_,rej)=>setTimeout(()=>rej(new Error("TIMEOUT: gravação demorou mais de 15s")),15000))
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error("TIMEOUT: gravação demorou mais de 30s")),30000))
       ]);
       // Sucesso: atualiza o objeto temporário com o ID gerado
       if(vRef&&vRef.id&&window._ultimaVistoriaFinalizada){
@@ -6438,7 +6425,7 @@ window.finalizarVistoria=async()=>{
       const msg=erroPersistencia.message||"";
       let detalhe;
       if(/TIMEOUT/i.test(msg)){
-        detalhe="\n\n⚠️ O servidor demorou demais para responder (timeout de 15s). O PDF e as fotos JÁ foram baixados no celular. Verifique sua conexão e tente finalizar novamente — a vistoria continua na sessão.";
+        detalhe="\n\n⚠️ O servidor demorou demais para responder (timeout de 30s). O PDF e as fotos JÁ foram baixados no celular. Verifique sua conexão e tente finalizar novamente — a vistoria continua na sessão.";
       } else if(erroPersistencia.code==="permission-denied"||/insufficient permissions/i.test(msg)){
         detalhe="\n\n⚠️ Seu usuário está sem permissão para salvar no servidor. O PDF e as fotos JÁ foram baixados no celular — guarde-os. Avise o administrador para verificar seu cadastro (peça para sair e entrar novamente no app).";
       } else if(/terminated/i.test(msg)){
@@ -7005,11 +6992,11 @@ function _pdfNovaPagComCabecalho(pdf,ML,MT,MR,CW,PW){
 //   adjacentes (3x3), desenhamos no canvas, plotamos o marcador no centro.
 async function baixarMapaOSM(lat,lon,larguraPx,alturaPx){
   if(!lat||!lon)return null;
-  const ZOOM=17; // bom detalhamento de rua sem perder contexto do bairro
-  // Conversão lat/lon → tile XY (fórmula padrão do OSM Slippy Map)
-  // https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+  // Zoom 18: cobre aproximadamente 5 quadras (área de ~250m x 250m num crop 768x300).
+  // Zoom 17 = ~10 quadras (mais amplo), Zoom 19 = ~2 quadras (muito perto).
+  const ZOOM=18;
+  // Conversão lat/lon → tile XY (fórmula Slippy Map padrão, usada por todos os provedores)
   const n=Math.pow(2,ZOOM);
-  const lonRad=lon*Math.PI/180;
   const latRad=lat*Math.PI/180;
   const xTileF=((lon+180)/360)*n;
   const yTileF=(1-Math.log(Math.tan(latRad)+1/Math.cos(latRad))/Math.PI)/2*n;
@@ -7018,62 +7005,73 @@ async function baixarMapaOSM(lat,lon,larguraPx,alturaPx){
   // Posição do ponto exato dentro do tile central (0-255 px)
   const xPx=Math.floor((xTileF-xTile)*256);
   const yPx=Math.floor((yTileF-yTile)*256);
-  // Vamos baixar 3x3 tiles = 768x768 px. Canvas final corta no centro com o
-  // tamanho desejado, mantendo o marcador centralizado.
+  // 3x3 tiles = 768x768 px de canvas. Crop final pro PDF é 768x300.
   const TILE=256;
   const GRID=3;
   const canvasFinal=document.createElement("canvas");
   canvasFinal.width=GRID*TILE;
   canvasFinal.height=GRID*TILE;
   const ctx=canvasFinal.getContext("2d");
-  ctx.fillStyle="#e5e7eb";ctx.fillRect(0,0,canvasFinal.width,canvasFinal.height);
-  // Baixa todos os tiles em paralelo
-  const promessas=[];
-  for(let dx=-1;dx<=1;dx++){
-    for(let dy=-1;dy<=1;dy++){
-      const tx=xTile+dx,ty=yTile+dy;
-      const px=(dx+1)*TILE,py=(dy+1)*TILE;
-      // Tile servers alternados (a, b, c) — distribuição de carga padrão OSM
-      const sub=["a","b","c"][Math.abs(tx+ty)%3];
-      const url=`https://${sub}.tile.openstreetmap.org/${ZOOM}/${tx}/${ty}.png`;
-      promessas.push(new Promise(res=>{
-        const img=new Image();
-        img.crossOrigin="anonymous";
-        const timer=setTimeout(()=>{img.src="";res();},8000);
-        img.onload=()=>{clearTimeout(timer);ctx.drawImage(img,px,py);res();};
-        img.onerror=()=>{clearTimeout(timer);res();}; // tile falhou, segue com fundo cinza
-        img.src=url;
-      }));
+  ctx.fillStyle="#1e3a5f";ctx.fillRect(0,0,canvasFinal.width,canvasFinal.height);
+  // === ESTRATÉGIA: Esri World Imagery (satélite gratuito sem chave) ===
+  // 2 camadas:
+  // 1) World_Imagery → imagem aérea/satélite (sem labels)
+  // 2) Reference/World_Boundaries_and_Places → labels de ruas e bairros sobrepostos
+  // Ambas são tile services públicos da Esri, gratuitos pra uso não-comercial.
+  // URL format: /MapServer/tile/{z}/{y}/{x} (note: y antes de x, ao contrário do OSM)
+  const baixarCamada=(urlFn)=>{
+    const ps=[];
+    for(let dx=-1;dx<=1;dx++){
+      for(let dy=-1;dy<=1;dy++){
+        const tx=xTile+dx,ty=yTile+dy;
+        const px=(dx+1)*TILE,py=(dy+1)*TILE;
+        const url=urlFn(ZOOM,tx,ty);
+        ps.push(new Promise(res=>{
+          const img=new Image();
+          img.crossOrigin="anonymous";
+          const timer=setTimeout(()=>{img.src="";res(null);},10000);
+          img.onload=()=>{clearTimeout(timer);res({img,px,py});};
+          img.onerror=()=>{clearTimeout(timer);res(null);};
+          img.src=url;
+        }));
+      }
     }
-  }
+    return Promise.all(ps);
+  };
   try{
-    await Promise.all(promessas);
-  }catch(e){console.warn("Erro nos tiles:",e);}
+    // Camada 1: satélite (Esri World Imagery)
+    const sat=await baixarCamada((z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`);
+    sat.forEach(r=>{if(r)ctx.drawImage(r.img,r.px,r.py);});
+    // Camada 2: nomes de ruas e lugares (Esri Reference)
+    const ref=await baixarCamada((z,x,y)=>`https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/${z}/${y}/${x}`);
+    ref.forEach(r=>{if(r)ctx.drawImage(r.img,r.px,r.py);});
+  }catch(e){console.warn("Erro nas camadas Esri:",e);}
   // Marcador vermelho no centro do canvas — posição = (1 tile + xPx, 1 tile + yPx)
   const cx=TILE+xPx,cy=TILE+yPx;
-  // Sombra
+  // Sombra do pino
   ctx.beginPath();ctx.ellipse(cx,cy+2,9,4,0,0,Math.PI*2);
-  ctx.fillStyle="rgba(0,0,0,0.3)";ctx.fill();
-  // Pino vermelho — formato de gota com base no marcador
+  ctx.fillStyle="rgba(0,0,0,0.5)";ctx.fill();
+  // Pino vermelho — cabeça
   ctx.beginPath();
-  ctx.arc(cx,cy-12,9,0,Math.PI*2);
+  ctx.arc(cx,cy-14,10,0,Math.PI*2);
   ctx.fillStyle="#dc2626";ctx.fill();
-  ctx.strokeStyle="#7f1d1d";ctx.lineWidth=1.5;ctx.stroke();
+  ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.stroke();
   // Triângulo de baixo (cauda do pino)
   ctx.beginPath();
-  ctx.moveTo(cx-6,cy-8);ctx.lineTo(cx+6,cy-8);ctx.lineTo(cx,cy);ctx.closePath();
-  ctx.fillStyle="#dc2626";ctx.fill();ctx.stroke();
-  // Bolinha branca no centro do pino (estilo Google Maps)
+  ctx.moveTo(cx-7,cy-10);ctx.lineTo(cx+7,cy-10);ctx.lineTo(cx,cy);ctx.closePath();
+  ctx.fillStyle="#dc2626";ctx.fill();
+  ctx.strokeStyle="#fff";ctx.lineWidth=1.5;ctx.stroke();
+  // Bolinha branca no centro do pino
   ctx.beginPath();
-  ctx.arc(cx,cy-12,3.5,0,Math.PI*2);
+  ctx.arc(cx,cy-14,3.5,0,Math.PI*2);
   ctx.fillStyle="#fff";ctx.fill();
-  // Crédito OSM no canto inferior direito (obrigatório por tile policy do OSM)
-  ctx.fillStyle="rgba(255,255,255,0.85)";
-  ctx.fillRect(canvasFinal.width-120,canvasFinal.height-14,118,12);
-  ctx.fillStyle="#374151";ctx.font="9px sans-serif";
-  ctx.fillText("© OpenStreetMap",canvasFinal.width-117,canvasFinal.height-4);
+  // Crédito Esri no canto inferior direito (exigido por termos de uso)
+  ctx.fillStyle="rgba(0,0,0,0.6)";
+  ctx.fillRect(canvasFinal.width-140,canvasFinal.height-16,138,14);
+  ctx.fillStyle="#fff";ctx.font="10px sans-serif";
+  ctx.fillText("© Esri, Maxar, Earthstar",canvasFinal.width-137,canvasFinal.height-5);
   try{
-    const dataUrl=canvasFinal.toDataURL("image/png");
+    const dataUrl=canvasFinal.toDataURL("image/jpeg",0.85);
     return {dataUrl,w:canvasFinal.width,h:canvasFinal.height};
   }catch(e){
     // canvas.toDataURL pode falhar se tiles vieram tainted (CORS) — fallback null
@@ -7196,6 +7194,11 @@ function _pdfAnexoI(pdf,ML,MT,MR,CW,PW,PH,MB,v){
   const tipoSel=_semAcento(v.tipo);
   const garagSel=_semAcento(id.garagem);
   const estadoSel=_semAcento(v.estado);
+  // DIAGNÓSTICO TEMPORÁRIO: se o tipo estiver vazio mas a vistoria tiver dados,
+  // mostra alert pra ajudar a identificar o bug. (Remover depois de diagnosticado)
+  if(!tipoSel&&v.responsavel&&v.responsavel.nome){
+    console.warn("[DIAG] v.tipo está vazio. Conteúdo bruto:",JSON.stringify(v.tipo),"v.ocupacao:",JSON.stringify(v.ocupacao));
+  }
   // Helper: renderiza opções inline com [X]/[  ] e item destacado.
   // Usa _semAcento pra comparar — o select do form tem "Terrea/Galpao" sem acento,
   // mas o PDF mostra com acento.
@@ -7320,7 +7323,11 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
   pdf.text("Mapa 1:",ML+4,y);pdf.setFont("helvetica","normal");pdf.text(" Mapa de localização do imóvel inspecionado.",ML+18,y);
   y+=5;
   // Quadro do mapa: 80mm de altura, largura total disponível.
-  const mapaW=CW-8,mapaH=80;
+  // Quadro do mapa: altura maior (proporcional ao canvas 768x768 que é quadrado).
+  // Largura do quadro = CW-8, altura 120mm: proporção ~1.4:1 (menos achatado que 80mm).
+  // O canvas é quadrado (768x768) mas o PDF aceita esticar — a leve distorção horizontal
+  // ainda é mais legível que cortar lateralmente.
+  const mapaW=CW-8,mapaH=120;
   pdf.setDrawColor(150,150,150);pdf.setLineWidth(0.3);
   pdf.rect(ML+4,y,mapaW,mapaH,"S");
   // === ESTRATÉGIA DE COORDENADAS PRO MAPA ===
@@ -7339,10 +7346,11 @@ async function gerarPDFCompletoPaginasContexto(pdf,v,prest,logoPrep,PW,PH,ML,MT,
     try{
       const mapa=await baixarMapaOSM(coords.lat,coords.lon,mapaW,mapaH);
       if(mapa&&mapa.dataUrl){
-        pdf.addImage(mapa.dataUrl,"PNG",ML+4,y,mapaW,mapaH,"","FAST");
+        // JPEG no addImage pra menor tamanho de PDF. Compression FAST mantém qualidade boa.
+        pdf.addImage(mapa.dataUrl,"JPEG",ML+4,y,mapaW,mapaH,"","FAST");
         mapaInserido=true;
       } else {
-        mensagemErroMapa="Mapa não pôde ser carregado (sem internet ou servidor OSM indisponível)";
+        mensagemErroMapa="Mapa não pôde ser carregado (sem internet ou servidor de mapas indisponível)";
       }
     }catch(e){
       console.warn("Erro ao inserir mapa:",e);
